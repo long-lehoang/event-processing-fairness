@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-db
+spec:
+  replicas: {{ .Values.authDb.replicaCount }}  # Number of replicas (from values.yaml)
+  selector:
+    matchLabels:
+      app: auth-db
+  template:
+    metadata:
+      labels:
+        app: auth-db
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: mysql
+          image: {{ .Values.authDb.image }}  # MySQL image (from values.yaml)
+          ports:
+            - containerPort: 3306
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+              ephemeral-storage: "1Gi"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+              ephemeral-storage: "2Gi"
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: {{ .Values.authDb.rootPassword }}  # Root password for MySQL (from values.yaml)
+            - name: MYSQL_DATABASE
+              value: {{ .Values.authDb.dbName }}  # Database name for MySQL (from values.yaml)
+            - name: MYSQL_USER
+              value: {{ .Values.authDb.username }}  # Database username (from values.yaml)
+            - name: MYSQL_PASSWORD
+              value: {{ .Values.authDb.password }}  # Database password (from values.yaml)

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-management-service
+spec:
+  replicas: {{ .Values.customerService.replicaCount }}  # Number of replicas (from values.yaml)
+  selector:
+    matchLabels:
+      app: customer-management-service
+  template:
+    metadata:
+      labels:
+        app: customer-management-service
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: customer-management-service
+          image: {{ .Values.customerService.image }}  # Docker image (from values.yaml)
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+              ephemeral-storage: "1Gi"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+              ephemeral-storage: "2Gi"
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: {{ .Values.customerService.dbUrl }}  # Database URL (from values.yaml)
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.customerService.dbUsername }}  # Database username (from values.yaml)
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: {{ .Values.customerService.dbPassword }}  # Database password (from values.yaml)
+            - name: REDIS_HOST
+              value: {{ .Values.customerService.redisHost }}  # Redis host (from values.yaml)
+            - name: REDIS_PORT
+              value: "{{ .Values.customerService.redisPort }}"  # Redis port (from values.yaml)
