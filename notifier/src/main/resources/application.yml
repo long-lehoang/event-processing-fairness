@@ -1,0 +1,64 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: event-processing-fairness
+  kafka:
+    topic:
+      webhook-event: ${WEBHOOK_EVENT_TOPIC:webhook-events}
+    bootstrap-servers: ${BOOTSTRAP_SERVERS_CONFIG:localhost:9092}
+    consumer:
+      group-id: event-processing-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false # We will manually commit after processing
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/eventdb
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    limit:
+      event: 100
+      time: 1 #minute
+
+resilience4j:
+  retry:
+    instances:
+      webhookRetry:
+        max-attempts: 5
+        wait-duration: 2s
+        exponential-backoff-multiplier: 2
+  circuitbreaker:
+    instances:
+      webhookCircuitBreaker:
+        failureRateThreshold: 50
+        slowCallRateThreshold: 60
+        slowCallDurationThreshold: 2s
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        minimumNumberOfCalls: 5
+        event-consumer-buffer-size: 10
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+thread-pool:
+  kafka-consumer:
+    core-size: 10
+    max-size: 50
+    queue-capacity: 100
