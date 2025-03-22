@@ -1,6 +1,6 @@
 package com.event.processing.producer.producer;
 
-import com.event.processing.producer.event.WebhookEvent;
+import com.event.processing.producer.event.WebhookEventDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -13,9 +13,9 @@ public class EventProducer{
   private String topic;
 
   @Autowired
-  private KafkaTemplate<String, Object> kafkaTemplate;
+  private KafkaTemplate<String, WebhookEventDTO> kafkaTemplate;
 
-  public void publishEvent(WebhookEvent event) {
+  public void publishEvent(WebhookEventDTO event) {
     kafkaTemplate.send(topic, event.getEventId(), event);
   }
 }

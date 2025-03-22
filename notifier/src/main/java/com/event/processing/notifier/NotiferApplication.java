@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class FairnessSaasApplication {
+public class NotiferApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(FairnessSaasApplication.class, args);
+		SpringApplication.run(NotiferApplication.class, args);
 	}
 
 }

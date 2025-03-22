@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: event-processing-fairness
+    name: notifier
   kafka:
     topic:
       webhook-event: ${WEBHOOK_EVENT_TOPIC:webhook-events}
@@ -12,12 +12,20 @@ spring:
       group-id: event-processing-group
       auto-offset-reset: earliest
       enable-auto-commit: false # We will manually commit after processing
+    producer:
+      retries: 5
+      acks: all
+      properties:
+        delivery.timeout.ms: 30000   # Max time before message fails
+        request.timeout.ms: 5000     # Timeout for broker response
+        retry.backoff.ms: 500        # Time between retries
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:5432/eventdb
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/webhook
+    username: ${DB_USER:postgre}
+    password: ${DB_PASSWORD:postgre}
     driver-class-name: org.postgresql.Driver
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true

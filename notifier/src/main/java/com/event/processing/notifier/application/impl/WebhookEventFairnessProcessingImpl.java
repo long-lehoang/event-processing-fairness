@@ -1,6 +1,8 @@
 package com.event.processing.notifier.application.impl;
 
-import com.event.processing.notifier.application.WebhookEventProcessingService;
+import com.event.processing.notifier.application.WebhookEventProcessing;
+import com.event.processing.notifier.domain.dto.SubscriberEventDTO;
+import com.event.processing.notifier.domain.dto.WebhookEventDTO;
 import com.event.processing.notifier.producer.EventProducer;
 import com.event.processing.notifier.service.DeduplicationService;
 import com.event.processing.notifier.service.RateLimiterService;
@@ -13,25 +15,25 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WebhookEventFairnessProcessingServiceImpl implements WebhookEventProcessingService {
+public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessing {
 
   private final DeduplicationService deduplicationService;
   private final RateLimiterService rateLimiterService;
-  private final WebhookService webhookService; // Use Interface, Not Implementation
+  private final WebhookService webhookService;
   private final EventProducer eventProducer;
 
   @Value("${spring.kafka.topic.webhook-event:webhook-events}")
   private String webhookEventTopic;
 
   @Override
-  public void process(String eventId, String payload) {
+  public void process(String eventId, WebhookEventDTO eventPayload, String url, SubscriberEventDTO webhookPayload) {
     log.info("Processing event: {}", eventId);
 
     if (isDuplicate(eventId)) return;
-    if (isRateLimited(eventId, payload)) return;
+    if (isRateLimited(eventId, eventPayload)) return;
 
     try {
-      webhookService.processWithRetry(eventId, payload);
+      webhookService.processWithRetry(eventId, url, webhookPayload);
       deduplicationService.markProcessed(eventId);
       log.info("Successfully processed event: {}", eventId);
     } catch (Exception e) {
@@ -47,8 +49,8 @@ public class WebhookEventFairnessProcessingServiceImpl implements WebhookEventPr
     return false;
   }
 
-  private boolean isRateLimited(String eventId, String payload) {
-    if (rateLimiterService.isExceedLimit(eventId)) {
+  private boolean isRateLimited(String eventId, WebhookEventDTO payload) {
+    if (!rateLimiterService.isAllow(eventId)) {
       log.warn("Event {} is rate limited. Pushing back to queue.", eventId);
       eventProducer.publish(webhookEventTopic, eventId, payload);
       return true;

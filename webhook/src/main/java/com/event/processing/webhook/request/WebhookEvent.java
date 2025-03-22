@@ -3,6 +3,7 @@ package com.event.processing.webhook.request;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 public class WebhookEvent {
@@ -18,7 +19,7 @@ public class WebhookEvent {
     private String source;
     private String firstName;
     private String lastName;
-    private List<Segments> segments;
+    private Set<Segments> segments;
     private Object customFields;
     private String optinIp;
     private String optinTimestamp;

@@ -1,6 +1,6 @@
 package com.event.processing.producer.controller;
 
-import com.event.processing.producer.event.WebhookEvent;
+import com.event.processing.producer.event.WebhookEventDTO;
 import com.event.processing.producer.producer.EventProducer;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,7 +15,7 @@ public class EventController {
   private EventProducer eventProducer;
 
   @PostMapping("/publish")
-  public String publishEvent(@RequestBody WebhookEvent event) {
+  public String publishEvent(@RequestBody WebhookEventDTO event) {
     eventProducer.publishEvent(event);
     return "Event published successfully";
   }

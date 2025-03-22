@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s  # How often Prometheus scrapes targets
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Scrape Kafka Metrics (Kafka Exporter)
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka-exporter:9308']  # If using kafka-exporter
+
+  # Scrape PostgreSQL Metrics (Postgres Exporter)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']  # If using postgres_exporter
+
+  # Scrape Spring Boot Actuator Metrics (Micrometer)
+  - job_name: 'application'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['app:8080']  # Change 'app' to your Spring Boot service name

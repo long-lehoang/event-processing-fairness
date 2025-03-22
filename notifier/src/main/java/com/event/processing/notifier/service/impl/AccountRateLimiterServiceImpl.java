@@ -1,6 +1,6 @@
 package com.event.processing.notifier.service.impl;
 
-import com.event.processing.notifier.config.RateLimitConfig;
+import com.event.processing.notifier.util.RateLimitProperties;
 import com.event.processing.notifier.service.RateLimiterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ public class AccountRateLimiterServiceImpl implements RateLimiterService {
   private static final String RATE_LIMIT_KEY_PREFIX = "rate-limit:";
 
   private final StringRedisTemplate redisTemplate;
-  private final RateLimitConfig rateLimitConfig;
+  private final RateLimitProperties rateLimitProperties;
 
   /**
    * Checks if a given account is allowed based on rate limits.
@@ -29,7 +29,7 @@ public class AccountRateLimiterServiceImpl implements RateLimiterService {
    * @return True if allowed, False if rate limit exceeded.
    */
   @Override
-  public boolean isExceedLimit(String accountId) {
+  public boolean isAllow(String accountId) {
     String key = RATE_LIMIT_KEY_PREFIX + accountId;
     ValueOperations<String, String> ops = redisTemplate.opsForValue();
 
@@ -37,10 +37,10 @@ public class AccountRateLimiterServiceImpl implements RateLimiterService {
       long currentCount = Optional.of(ops.increment(key, 1)).orElse(1L);
 
       if (currentCount == 1) {
-        redisTemplate.expire(key, Duration.ofMinutes(rateLimitConfig.getDurationMinutes()));
+        redisTemplate.expire(key, Duration.ofMinutes(rateLimitProperties.getTime()));
       }
 
-      boolean allowed = currentCount <= rateLimitConfig.getLimit();
+      boolean allowed = currentCount <= rateLimitProperties.getEvent();
       if (!allowed) {
         log.warn("Rate limit exceeded for account: {}", accountId);
       }
