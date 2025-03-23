@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,11 +31,11 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
   private final MeterRegistry meterRegistry;
   private final ThreadPoolTaskExecutor kafkaConsumerExecutor;
 
-  @Value("${spring.kafka.topic.webhook-event:webhook-events}")
+  @Value("${spring.kafka.topic.webhook-event.name:webhook-events}")
   private String topic;
 
   @KafkaListener(
-      topics = "${spring.kafka.topic.webhook-event:webhook-events}",
+      topics = "${spring.kafka.topic.webhook-event.name:webhook-events}",
       groupId = "webhook-group",
       containerFactory = "kafkaListenerContainerFactory"
   )

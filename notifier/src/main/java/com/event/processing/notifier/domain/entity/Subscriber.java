@@ -10,7 +10,7 @@ import java.time.Instant;
 @Entity
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class Subscriber extends BaseEntity{
+public class Subscriber extends BaseEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,7 +32,7 @@ public class Subscriber extends BaseEntity{
   private String lastName;
 
   @Column
-  private String customeFields;
+  private String customFields;
 
   @Column
   private String optinIp;

@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 public interface WebhookService {
-  void processWithRetry(String eventId, String url, SubscriberEventDTO payload);
+  void processWithRetry(String eventId, WebhookEventDTO eventPayload, String url, SubscriberEventDTO payload);
 
   Map<String, SubscriberEventDTO> getPayloads(Set<String> eventIds);
 

@@ -1,13 +1,13 @@
 package com.event.processing.notifier.domain.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.MappedSuperclass;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-import java.io.Serializable;
 import java.time.Instant;
 
 @Data
+@MappedSuperclass
 public class BaseEntity {
 
   @Column

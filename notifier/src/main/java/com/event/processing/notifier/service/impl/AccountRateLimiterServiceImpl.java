@@ -1,7 +1,7 @@
 package com.event.processing.notifier.service.impl;
 
-import com.event.processing.notifier.util.RateLimitProperties;
 import com.event.processing.notifier.service.RateLimiterService;
+import com.event.processing.notifier.util.RateLimitProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;

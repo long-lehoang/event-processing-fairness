@@ -22,7 +22,7 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
   private final WebhookService webhookService;
   private final EventProducer eventProducer;
 
-  @Value("${spring.kafka.topic.webhook-event:webhook-events}")
+  @Value("${spring.kafka.topic.webhook-event.name:webhook-events}")
   private String webhookEventTopic;
 
   @Override
@@ -33,7 +33,7 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
     if (isRateLimited(eventId, eventPayload)) return;
 
     try {
-      webhookService.processWithRetry(eventId, url, webhookPayload);
+      webhookService.processWithRetry(eventId, eventPayload, url, webhookPayload);
       deduplicationService.markProcessed(eventId);
       log.info("Successfully processed event: {}", eventId);
     } catch (Exception e) {

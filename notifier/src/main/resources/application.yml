@@ -6,12 +6,23 @@ spring:
     name: notifier
   kafka:
     topic:
-      webhook-event: ${WEBHOOK_EVENT_TOPIC:webhook-events}
+      webhook-event:
+        name: ${WEBHOOK_EVENT_TOPIC:webhook-events}
+        partitions: 3
+        replication-factor: 1
+      dead-letter-queue-topic:
+        name: ${WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC:webhook-event-dead-letter-queue}
+        partitions: 3
+        replication-factor: 1
     bootstrap-servers: ${BOOTSTRAP_SERVERS_CONFIG:localhost:9092}
     consumer:
       group-id: event-processing-group
       auto-offset-reset: earliest
       enable-auto-commit: false # We will manually commit after processing
+      poll-timeout: 3000
+      max-poll-records: 20
+    listener:
+      concurrency: 1
     producer:
       retries: 5
       acks: all

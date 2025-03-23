@@ -13,9 +13,9 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class RedisDeduplicationServiceImpl implements DeduplicationService {
 
-  private final StringRedisTemplate redisTemplate;
   private static final String KEY_PREFIX = "deduplicate:event:";
   private static final Duration EXPIRY_TIME = Duration.ofMinutes(30);  // Configurable
+  private final StringRedisTemplate redisTemplate;
 
   @Override
   public boolean isDuplicate(String eventId) {
