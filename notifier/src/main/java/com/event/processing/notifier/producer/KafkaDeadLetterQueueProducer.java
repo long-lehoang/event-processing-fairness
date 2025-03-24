@@ -10,6 +10,22 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Kafka-based implementation of the DeadLetterQueueProducer interface for
+ * handling failed webhook events.
+ * This class manages the asynchronous publishing of failed events to a
+ * Kafka-based dead letter queue,
+ * providing detailed logging and error handling capabilities.
+ *
+ * Key features:
+ * - Asynchronous DLQ publishing
+ * - Detailed logging of failed events
+ * - Error handling and reporting
+ * - Kafka metadata tracking
+ *
+ * @author LongLe
+ * @version 1.0
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -17,6 +33,16 @@ public class KafkaDeadLetterQueueProducer implements DeadLetterQueueProducer {
 
   private final KafkaTemplate<String, WebhookEventDTO> kafkaTemplate;
 
+  /**
+   * Publishes a failed webhook event to the Kafka dead letter queue
+   * asynchronously.
+   * The method uses KafkaTemplate to send the event and provides detailed logging
+   * of the publishing process, including success and failure scenarios.
+   *
+   * @param topic   The dead letter queue topic to publish the event to
+   * @param id      The unique identifier for the failed event
+   * @param payload The webhook event payload that failed processing
+   */
   @Override
   public void publish(String topic, String id, WebhookEventDTO payload) {
     log.info("Publishing event to DLQ: Topic={}, Key={}, Payload={}", topic, id, payload);

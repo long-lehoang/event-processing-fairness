@@ -16,28 +16,75 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Configuration class for Kafka consumer settings.
+ * This class configures the Kafka consumer properties and creates necessary
+ * beans
+ * for consuming messages from Kafka topics.
+ *
+ * Key features:
+ * - Manual commit mode for better control over message processing
+ * - Batch processing support
+ * - Configurable concurrency
+ * - JSON deserialization for WebhookEventDTO
+ * - Configurable poll timeout and max records per poll
+ *
+ * @author LongLe
+ * @version 1.0
+ */
 @Configuration
 @Slf4j
 public class KafkaConsumerConfig {
 
+  /**
+   * Kafka bootstrap servers configuration.
+   * Retrieved from application properties.
+   */
   @Value("${spring.kafka.bootstrap-servers}")
   private String bootstrapServers;
 
+  /**
+   * Consumer group ID for Kafka consumer group management.
+   * Defaults to 'event-processing-group' if not specified.
+   */
   @Value("${spring.kafka.consumer.group-id:event-processing-group}")
   private String groupId;
 
+  /**
+   * Flag to enable/disable auto commit of offsets.
+   * Defaults to false for manual commit control.
+   */
   @Value("${spring.kafka.consumer.enable-auto-commit:false}")
   private boolean enableAutoCommit;
 
+  /**
+   * Maximum time to wait for data when polling Kafka.
+   * Defaults to 3000ms if not specified.
+   */
   @Value("${spring.kafka.consumer.poll-timeout:3000}")
   private int pollTimeout;
 
+  /**
+   * Maximum number of records to fetch in a single poll.
+   * Defaults to 20 records if not specified.
+   */
   @Value("${spring.kafka.consumer.max-poll-records:20}")
   private int maxPollRecords;
 
+  /**
+   * Number of concurrent threads for message processing.
+   * Defaults to 1 if not specified.
+   */
   @Value("${spring.kafka.listener.concurrency:1}")
   private int concurrency;
 
+  /**
+   * Creates and configures the Kafka ConsumerFactory.
+   * Sets up deserializers and consumer properties for processing WebhookEventDTO
+   * messages.
+   *
+   * @return Configured ConsumerFactory instance
+   */
   @Bean
   public ConsumerFactory<String, WebhookEventDTO> consumerFactory() {
     Map<String, Object> props = new HashMap<>();
@@ -57,6 +104,12 @@ public class KafkaConsumerConfig {
         new JsonDeserializer<>(WebhookEventDTO.class, false));
   }
 
+  /**
+   * Creates and configures the Kafka Listener Container Factory.
+   * Sets up batch processing, concurrency, and acknowledgment mode.
+   *
+   * @return Configured ConcurrentKafkaListenerContainerFactory instance
+   */
   @Bean
   public ConcurrentKafkaListenerContainerFactory<String, WebhookEventDTO> kafkaListenerContainerFactory() {
     ConcurrentKafkaListenerContainerFactory<String, WebhookEventDTO> factory = new ConcurrentKafkaListenerContainerFactory<>();
@@ -66,7 +119,8 @@ public class KafkaConsumerConfig {
     factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
     factory.getContainerProperties().setPollTimeout(pollTimeout);
 
-    log.info("Initializing Kafka Batch Listener Factory with Concurrency: {}, Poll Timeout: {}, Ack Mode: MANUAL_IMMEDIATE",
+    log.info(
+        "Initializing Kafka Batch Listener Factory with Concurrency: {}, Poll Timeout: {}, Ack Mode: MANUAL_IMMEDIATE",
         concurrency, pollTimeout);
 
     return factory;

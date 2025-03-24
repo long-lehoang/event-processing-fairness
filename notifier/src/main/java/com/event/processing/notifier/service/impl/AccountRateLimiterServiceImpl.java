@@ -11,22 +11,47 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.util.Optional;
 
+/**
+ * Redis-based implementation of RateLimiterService for account-level rate
+ * limiting.
+ * This class provides rate limiting functionality using Redis as a distributed
+ * counter,
+ * ensuring consistent rate limiting across multiple instances of the
+ * application.
+ *
+ * Key features:
+ * - Redis-based distributed rate limiting
+ * - Configurable rate limits and time windows
+ * - Fail-safe behavior on Redis failures
+ * - Detailed logging of rate limit violations
+ *
+ * @author LongLe
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AccountRateLimiterServiceImpl implements RateLimiterService {
 
-
+  /**
+   * Prefix used for Redis keys to identify rate limit counters.
+   */
   private static final String RATE_LIMIT_KEY_PREFIX = "rate-limit:";
 
   private final StringRedisTemplate redisTemplate;
   private final RateLimitProperties rateLimitProperties;
 
   /**
-   * Checks if a given account is allowed based on rate limits.
+   * Checks if an account is allowed to process events based on rate limits.
+   * This method implements a sliding window rate limiter using Redis:
+   * - Increments a counter for the account
+   * - Sets expiration on first increment
+   * - Checks against configured rate limit
+   * - Implements fail-safe behavior on Redis failures
    *
-   * @param accountId The account ID.
-   * @return True if allowed, False if rate limit exceeded.
+   * @param accountId The unique identifier of the account to check
+   * @return true if the account is within rate limits, false if rate limit
+   *         exceeded
    */
   @Override
   public boolean isAllow(String accountId) {
