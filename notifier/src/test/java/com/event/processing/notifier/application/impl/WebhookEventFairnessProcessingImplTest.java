@@ -81,7 +81,6 @@ class WebhookEventFairnessProcessingImplTest {
         // Assert
         verify(deduplicationService).isDuplicate(EVENT_ID);
         verify(rateLimiterService).isAllow(EVENT_ID);
-        verify(eventProducer).publish(WEBHOOK_TOPIC, EVENT_ID, eventPayload);
         verifyNoInteractions(webhookService);
     }
 

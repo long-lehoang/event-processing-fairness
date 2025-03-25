@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant Producer
+    participant Kafka as Kafka (MSK)
+    participant Consumer as Webhook Notifier (ECS Fargate)
+    participant Redis as Redis (ElastiCache)
+    participant RDS as PostgreSQL (RDS)
+    participant Webhook as Webhook URL
+    participant DLQ as Dead Letter Queue (Kafka)
+
+    Producer->>Kafka: Publish Event (subscriber.created)
+    Consumer->>Kafka: Consume Event
+    Consumer->>Redis: Check Rate Limit (account_id)
+    alt Rate Limit Exceeded
+        Consumer->>Kafka: Push Back Event (Retry Later)
+    else Rate Limit Allowed
+        Consumer->>RDS: Fetch Payload Data
+        RDS-->>Consumer: Return Data
+        loop Retry with Circuit Breaker
+            Consumer->>Webhook: POST Request
+            alt Success
+                Webhook-->>Consumer: 200 OK
+            else Failure
+                Webhook-->>Consumer: Error Response
+                Consumer->>Redis: Increment Failure Count
+                alt Circuit Breaker Open or Max Retries Exceeded
+                    Consumer->>DLQ: Push to Dead Letter Queue
+                else Retry Again
+                    Consumer->>Webhook: Retry POST Request
+                end
+            end
+        end
+    end
