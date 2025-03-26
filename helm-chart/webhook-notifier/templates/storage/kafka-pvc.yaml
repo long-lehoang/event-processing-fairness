@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: auth-db-pvc
+  name: kafka-pvc
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: {{ .Values.authDb.storage }}
+      storage: {{ .Values.kafka.storage }}

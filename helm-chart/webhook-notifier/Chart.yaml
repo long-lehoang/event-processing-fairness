@@ -1,0 +1,5 @@
+apiVersion: v2
+name: webhook-notifier
+description: A Helm chart for deploying Producer, Notifier, Kafka, Redis, PostgreSQL, Prometheus, and Grafana
+version: 0.1.0
+appVersion: "1.0.0"

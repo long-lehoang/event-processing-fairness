@@ -1,14 +1,12 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: app-pv
-  annotations:
-    argocd.argoproj.io/ignore: "true"
+  name: postgres-pv
 spec:
   capacity:
-    storage: 6Gi
+    storage: {{ .Values.postgres.storage }}
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: /mnt/data/mysql
+    path: "/mnt/data/postgres"

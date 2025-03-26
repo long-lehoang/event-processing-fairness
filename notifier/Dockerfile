@@ -5,7 +5,7 @@ FROM openjdk:24-ea-17-jdk
 WORKDIR /app
 
 # Copy the application JAR file
-COPY target/producer-0.0.1-SNAPSHOT.jar app.jar
+COPY target/notifier-0.0.1-SNAPSHOT.jar app.jar
 
 # Expose the application port
 EXPOSE 8080

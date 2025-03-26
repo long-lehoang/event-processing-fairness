@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: producer-ingress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  rules:
+    - host: {{ .Values.ingress.host.producer }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: producer
+                port:
+                  number: {{ .Values.producer.port }}

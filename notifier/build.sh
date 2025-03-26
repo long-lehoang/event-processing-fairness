@@ -11,13 +11,13 @@ fi
 
 # Set variables
 VERSION="$1"
-PROJECT_NAME="webhook-producer"
+PROJECT_NAME="webhook-notifier"
 REGISTRY="longbale1999" # Replace with your Docker Hub username or registry
 IMAGE_NAME="$REGISTRY/$PROJECT_NAME:$VERSION"
 
 # Step 1: Clean and build the Spring Boot application
 echo "Building the Spring Boot application..."
-mvn clean package -DskipTests
+mvn clean package
 
 # Step 2: Build the Docker image using the existing Dockerfile
 echo "Building Docker image..."
