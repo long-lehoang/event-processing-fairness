@@ -93,15 +93,17 @@ minikube tunnel
 To deploy the microservices Helm chart, use the following commands:
 
 ```sh
-helm repo add e-commerce-microservices https://example.com/helm-charts
-helm repo update
-helm install e-commerce e-commerce-microservices/e-commerce
+kubectl create namespace kafka
+kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
+kubectl apply -f https://strimzi.io/examples/latest/kafka/kraft/kafka-single-node.yaml -n kafka 
+cd helm-chart
+helm install webhook ./helm-chart -n kafka
 ```
 
 Verify the deployment:
 
 ```sh
-kubectl get pods -l app=e-commerce
+kubectl get pods -l app=kafka
 ```
 
-You have now deployed the e-commerce microservices using the Helm chart.
+You have now deployed the microservices using the Helm chart.

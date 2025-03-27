@@ -19,12 +19,14 @@ spec:
           ports:
             - containerPort: {{ .Values.producer.port }}
           env:
-            - name: KAFKA_BROKER
-              value: "kafka:{{ .Values.kafka.port }}"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.notifier.env.BOOTSTRAP_SERVERS_CONFIG }}
+            - name: WEBHOOK_EVENT_TOPIC
+              value: {{ .Values.notifier.env.WEBHOOK_EVENT_TOPIC }}
           livenessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
+              port: {{ .Values.producer.port }}
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3
@@ -32,7 +34,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
+              port: {{ .Values.producer.port }}
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 3

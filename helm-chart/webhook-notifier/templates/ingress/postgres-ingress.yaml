@@ -1,17 +1,17 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: producer-ingress
+  name: postgres-ingress
   namespace: {{ .Values.global.namespace }}
 spec:
   rules:
-    - host: {{ .Values.ingress.host.producer }}
+    - host: {{ .Values.ingress.host.postgres }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: producer
+                name: postgres
                 port:
-                  number: {{ .Values.producer.port }}
+                  number: {{ .Values.postgres.port }}

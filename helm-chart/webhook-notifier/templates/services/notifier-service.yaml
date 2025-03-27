@@ -8,5 +8,5 @@ spec:
     app: notifier
   ports:
     - protocol: TCP
-      port: {{ .Values.notifier.port }}
-      targetPort: {{ .Values.notifier.port }}
+      port: {{ .Values.notifier.service.port }}
+      targetPort: {{ .Values.notifier.service.port }}

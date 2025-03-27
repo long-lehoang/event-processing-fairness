@@ -1,26 +1,22 @@
 global:
-  namespace: "webhook"
+  namespace: "kafka"
 
 producer:
   image: longbale1999/webhook-producer:1.0.0
   replicaCount: 1
-  port: 8080
+  port: 8084
 
 notifier:
   replicaCount: 2
-  image:
-    repository: longbale1999/webhook-notifier:1.0.0
-    tag: latest
-    pullPolicy: IfNotPresent
+  image: longbale1999/webhook-notifier:1.0.0
   service:
     type: ClusterIP
     port: 8080
   ingress:
     enabled: false
   env:
-    SERVER_PORT: 8080
     # Kafka Config
-    BOOTSTRAP_SERVERS_CONFIG: "kafka:9092"
+    BOOTSTRAP_SERVERS_CONFIG: "my-cluster-kafka-bootstrap:9092"
     WEBHOOK_EVENT_TOPIC: "webhook-events"
     WEBHOOK_EVENT_TOPIC_PARTITIONS: 3
     WEBHOOK_EVENT_TOPIC_REPLICATION_FACTOR: 1
@@ -55,23 +51,15 @@ postgres:
   image: "postgres:latest"
   storage: 10Gi
   port: 5432
-  username: "admin"
-  password: "securepassword"
-  database: "mydb"
-
-kafka:
-  enabled: true
-  replicaCount: 1
-  image: "bitnami/kafka:latest"
-  port: 9092
-  controllerPort: 9093
-  storage: 10Gi
+  username: "postgres"
+  password: "postgres"
+  database: "webhook"
 
 redis:
   image: "redis:latest"
   storage: 5Gi
   port: 6379
-  usePassword: true  # Set to false for local/staging
+  usePassword: false  # Set to false for local/staging
   password: "strongpassword"
 
 prometheus:
