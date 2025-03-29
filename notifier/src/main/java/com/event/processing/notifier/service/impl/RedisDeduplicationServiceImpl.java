@@ -14,7 +14,7 @@ import java.time.Duration;
  * distributed
  * cache, ensuring consistent deduplication across multiple instances of the
  * application.
- *
+ * <p>
  * Key features:
  * - Redis-based distributed deduplication
  * - Configurable event expiry time
@@ -51,7 +51,7 @@ public class RedisDeduplicationServiceImpl implements DeduplicationService {
    *
    * @param eventId The unique identifier of the event to check
    * @return true if the event is a duplicate and should be skipped, false
-   *         otherwise
+   * otherwise
    */
   @Override
   public boolean isDuplicate(String eventId) {

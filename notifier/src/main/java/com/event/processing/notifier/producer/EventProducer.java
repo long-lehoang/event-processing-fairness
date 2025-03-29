@@ -8,7 +8,7 @@ import com.event.processing.notifier.domain.dto.WebhookEventDTO;
  * This interface provides a standardized way to publish webhook events to a
  * specified topic
  * with a unique identifier.
- *
+ * <p>
  * Key features:
  * - Topic-based event publishing
  * - Unique event identification

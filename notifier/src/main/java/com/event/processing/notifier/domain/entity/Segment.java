@@ -8,12 +8,12 @@ import lombok.EqualsAndHashCode;
  * Entity class representing a subscriber segment in the system.
  * This class defines the different segments or groups that subscribers
  * can be categorized into.
- *
+ * <p>
  * Key features:
  * - Unique segment identification
  * - Segment name
  * - Audit information inheritance
- *
+ * <p>
  * Uses JPA annotations for database mapping and Lombok annotations
  * for reducing boilerplate code.
  *

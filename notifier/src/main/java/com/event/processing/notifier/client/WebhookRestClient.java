@@ -13,7 +13,7 @@ import org.springframework.web.client.RestClient;
  * This class provides HTTP-based webhook delivery functionality using Spring's
  * RestClient,
  * with comprehensive logging and error handling.
- *
+ * <p>
  * Key features:
  * - HTTP POST-based webhook delivery
  * - Response status code validation
@@ -45,7 +45,7 @@ public class WebhookRestClient implements WebhookClient {
    * @param webhookUrl The destination URL for the webhook notification
    * @param payload    The event payload to be sent in the webhook
    * @return true if the webhook was successfully delivered (2xx status code),
-   *         false otherwise
+   * false otherwise
    * @throws Exception if the webhook delivery fails
    */
   @Override

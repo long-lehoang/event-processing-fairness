@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
  * - Rate limiting to control event processing rate
  * - Retry mechanism for failed deliveries
  * - Event republishing for rate-limited events
- *
+ * <p>
  * Key features:
  * - Duplicate event detection and handling
  * - Rate limiting with queue-based backoff

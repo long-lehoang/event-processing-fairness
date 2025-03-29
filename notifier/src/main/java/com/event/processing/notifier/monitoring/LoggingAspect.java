@@ -15,7 +15,7 @@ import java.util.Arrays;
  * This class provides cross-cutting logging functionality across the
  * application,
  * automatically logging method entry, exit, execution time, and any exceptions.
- *
+ * <p>
  * Key features:
  * - Method execution time tracking
  * - Parameter logging

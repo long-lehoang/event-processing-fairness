@@ -4,7 +4,7 @@ package com.event.processing.notifier.service;
  * Interface defining the contract for rate limiting functionality.
  * This interface provides a standardized way to control the frequency
  * of event processing based on configured rate limits.
- *
+ * <p>
  * Key features:
  * - Event-based rate limiting
  * - Configurable rate limits
@@ -23,7 +23,7 @@ public interface RateLimiterService {
    *
    * @param eventId The unique identifier of the event to check
    * @return true if the event is allowed to be processed, false if it should be
-   *         rate limited
+   * rate limited
    */
   boolean isAllow(String eventId);
 }

@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
  * Configuration properties for rate limiting functionality.
  * This class defines the rate limiting parameters used to control the frequency
  * of webhook event processing.
- *
+ * <p>
  * Key features:
  * - Configurable event rate limit
  * - Configurable time window
@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Setter
 @Configuration
-@ConfigurationProperties(prefix = "spring.redis.limit")
+@ConfigurationProperties(prefix = "spring.data.redis.limit")
 public class RateLimitProperties {
   /**
    * Maximum number of events allowed within the time window.

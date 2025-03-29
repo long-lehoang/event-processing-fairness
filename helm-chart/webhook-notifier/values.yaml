@@ -8,7 +8,7 @@ producer:
 
 notifier:
   replicaCount: 2
-  image: longbale1999/webhook-notifier:1.0.0
+  image: longbale1999/webhook-notifier:1.0.1
   service:
     type: ClusterIP
     port: 8080
@@ -51,6 +51,7 @@ postgres:
   image: "postgres:latest"
   storage: 10Gi
   port: 5432
+  nodePort: 30432
   username: "postgres"
   password: "postgres"
   database: "webhook"
@@ -73,5 +74,4 @@ grafana:
 ingress:
   host:
     producer: "producer.local"
-    prometheus: "prometheus.local"
-    grafana: "grafana.local"
+    postgres: "postgres.local"

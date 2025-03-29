@@ -5,7 +5,7 @@ package com.event.processing.notifier.service;
  * This interface provides a standardized way to prevent duplicate event
  * processing
  * by tracking processed events and checking for duplicates.
- *
+ * <p>
  * Key features:
  * - Event deduplication checking
  * - Processed event tracking
@@ -23,7 +23,7 @@ public interface DeduplicationService {
    *
    * @param eventId The unique identifier of the event to check
    * @return true if the event is a duplicate and should be skipped, false
-   *         otherwise
+   * otherwise
    */
   boolean isDuplicate(String eventId);
 

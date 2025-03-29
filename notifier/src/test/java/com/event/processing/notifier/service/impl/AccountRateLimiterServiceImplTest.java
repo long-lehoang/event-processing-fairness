@@ -6,7 +6,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -15,9 +14,6 @@ import org.springframework.data.redis.core.ValueOperations;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -26,21 +22,17 @@ import static org.mockito.Mockito.*;
 @DisplayName("AccountRateLimiterServiceImpl Tests")
 class AccountRateLimiterServiceImplTest {
 
-  @Mock
-  private StringRedisTemplate redisTemplate;
-
-  @Mock
-  private ValueOperations<String, String> valueOperations;
-
-  @Mock
-  private RateLimitProperties rateLimitProperties;
-
-  private AccountRateLimiterServiceImpl rateLimiterService;
-
   private static final String ACCOUNT_ID = "test-account-id";
   private static final String EXPECTED_KEY = "rate-limit:" + ACCOUNT_ID;
   private static final int MAX_EVENTS = 100;
   private static final int TIME_WINDOW_MINUTES = 5;
+  @Mock
+  private StringRedisTemplate redisTemplate;
+  @Mock
+  private ValueOperations<String, String> valueOperations;
+  @Mock
+  private RateLimitProperties rateLimitProperties;
+  private AccountRateLimiterServiceImpl rateLimiterService;
 
   @BeforeEach
   void setUp() {

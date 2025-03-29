@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * This class handles the processing and enrichment of subscriber creation
  * events
  * with their associated segments and webhook URLs.
- *
+ * <p>
  * Key features:
  * - Subscriber creation event type support
  * - Webhook URL mapping for events

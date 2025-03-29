@@ -14,11 +14,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import static com.event.processing.notifier.util.PromeTheusMetricContants.*;
+
 /**
  * Implementation of WebhookService that provides robust webhook delivery with
  * retry,
  * circuit breaker, and monitoring capabilities.
- *
+ * <p>
  * Key features:
  * - Retry mechanism for failed webhook deliveries
  * - Circuit breaker for fault tolerance
@@ -34,9 +36,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class WebhookServiceImpl implements WebhookService {
 
-  private static final String WEBHOOK_EXECUTION_TIME = "webhook.execution.time";
-  private static final String WEBHOOK_FAILURE_COUNT = "webhook.failure";
-  private static final String CIRCUIT_BREAKER_OPEN_COUNT = "webhook.circuit.open";
   private final WebhookClient webhookClient;
   private final DeadLetterQueueProducer deadLetterQueueProducer;
   private final MeterRegistry meterRegistry;
@@ -59,7 +58,7 @@ public class WebhookServiceImpl implements WebhookService {
   @Retry(name = "webhookRetry", fallbackMethod = "handleFailure")
   @CircuitBreaker(name = "webhookCircuitBreaker", fallbackMethod = "handleCircuitBreak")
   public void processWithRetry(String eventId, WebhookEventDTO eventPayload, String webhookUrl,
-      BaseEventDTO webhookPayload) {
+                               BaseEventDTO webhookPayload) {
     Timer.Sample timer = Timer.start(meterRegistry);
     try {
       log.info("Sending webhook for event: {}", eventId);
@@ -90,7 +89,7 @@ public class WebhookServiceImpl implements WebhookService {
    * @param e              The exception that caused the failure
    */
   private void handleFailure(String eventId, WebhookEventDTO eventPayload, String webhookUrl,
-      BaseEventDTO webhookPayload, Exception e) {
+                             BaseEventDTO webhookPayload, Exception e) {
     log.warn("All retries exhausted. Webhook failed for event: {}, url: {}", eventId, webhookUrl, e);
   }
 
@@ -106,7 +105,7 @@ public class WebhookServiceImpl implements WebhookService {
    * @param e              The exception that triggered the circuit breaker
    */
   private void handleCircuitBreak(String eventId, WebhookEventDTO eventPayload, String webhookUrl,
-      BaseEventDTO webhookPayload, Exception e) {
+                                  BaseEventDTO webhookPayload, Exception e) {
     log.error("Circuit breaker open. Moving event {} to DLQ.", eventId, e);
     meterRegistry.counter(CIRCUIT_BREAKER_OPEN_COUNT).increment();
     deadLetterQueueProducer.publish(deadLetterQueueTopic, eventId, eventPayload);

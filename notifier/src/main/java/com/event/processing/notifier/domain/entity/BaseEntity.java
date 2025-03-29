@@ -10,12 +10,12 @@ import java.time.Instant;
  * Base entity class for all domain entities in the application.
  * This class provides common fields and functionality for all entities,
  * including audit information.
- *
+ * <p>
  * Key features:
  * - Creation timestamp tracking
  * - Creator identification
  * - JPA mapping support
- *
+ * <p>
  * Uses Lombok annotations for reducing boilerplate code and JPA annotations
  * for database mapping.
  *

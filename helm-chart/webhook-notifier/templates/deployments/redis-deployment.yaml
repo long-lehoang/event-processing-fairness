@@ -18,14 +18,3 @@ spec:
           image: "{{ .Values.redis.image }}"
           ports:
             - containerPort: {{ .Values.redis.port }}
-          {{- if .Values.redis.usePassword }}
-          env:
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: redis-secret
-                  key: REDIS_PASSWORD
-          args:
-            - "--requirepass"
-            - "$(REDIS_PASSWORD)"
-          {{- end }}

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  * Configuration properties for the Kafka consumer thread pool.
  * This class defines the thread pool parameters used for parallel processing
  * of Kafka consumer records.
- *
+ * <p>
  * Key features:
  * - Configurable core pool size
  * - Configurable maximum pool size

@@ -7,13 +7,13 @@ import lombok.EqualsAndHashCode;
 /**
  * Entity class representing the relationship between webhooks and events.
  * This class manages which events should be sent to which webhook endpoints.
- *
+ * <p>
  * Key features:
  * - Unique relationship identification
  * - Webhook reference
  * - Event reference
  * - Audit information inheritance
- *
+ * <p>
  * Uses JPA annotations for database mapping and Lombok annotations
  * for reducing boilerplate code.
  *

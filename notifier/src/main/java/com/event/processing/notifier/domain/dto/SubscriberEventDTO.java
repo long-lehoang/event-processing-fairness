@@ -11,12 +11,12 @@ import java.time.Instant;
  * This class represents events related to subscribers and their webhook
  * notifications.
  * Extends BaseEventDTO to maintain consistency in the event hierarchy.
- *
+ * <p>
  * The DTO includes:
  * - Event identification and timing
  * - Subscriber information
  * - Webhook configuration details
- *
+ * <p>
  * Uses Lombok annotations for reducing boilerplate code and Jackson annotations
  * for JSON property mapping.
  *
@@ -75,7 +75,7 @@ public class SubscriberEventDTO extends BaseEventDTO {
    * @param webhookId  Webhook identifier
    */
   public SubscriberEventDTO(String id, String eventName, Instant eventTime, SubscriberDTO subscriber,
-      String webhookId) {
+                            String webhookId) {
     this.id = id;
     this.eventName = eventName;
     this.eventTime = String.valueOf(eventTime);

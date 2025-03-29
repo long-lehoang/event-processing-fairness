@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
  * Repository interface for managing Subscriber entities.
  * Provides database operations for subscriber information and their
  * relationships with segments and events.
- *
+ * <p>
  * Key features:
  * - Basic CRUD operations inherited from JpaRepository
  * - Subscriber profile management

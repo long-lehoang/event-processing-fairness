@@ -8,7 +8,7 @@ import com.event.processing.notifier.domain.dto.WebhookEventDTO;
  * This interface provides a standardized way to handle events that could not be
  * processed
  * successfully, allowing for later analysis and potential reprocessing.
- *
+ * <p>
  * Key features:
  * - Failed event handling
  * - Dead letter queue publishing

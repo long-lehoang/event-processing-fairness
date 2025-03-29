@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
  * Configuration class for Kafka topic settings.
  * This class defines and configures Kafka topics used in the application,
  * including the Dead Letter Queue (DLQ) for failed message processing.
- *
+ * <p>
  * Key features:
  * - Configurable Dead Letter Queue topic
  * - Adjustable number of partitions

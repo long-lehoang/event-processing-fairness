@@ -13,95 +13,91 @@ import org.springframework.web.client.RestClient;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class WebhookRestClientTest {
 
-    @Mock
-    private RestClient restClient;
+  private static final String WEBHOOK_URL = "http://test-url.com";
+  private static final String SUCCESS_RESPONSE = "Success";
+  private static final String ERROR_MESSAGE = "Connection refused";
+  @Mock
+  private RestClient restClient;
+  @Mock
+  private RestClient.RequestBodyUriSpec requestBodyUriSpec;
+  @Mock
+  private RestClient.RequestBodySpec requestBodySpec;
+  @Mock
+  private RestClient.ResponseSpec responseSpec;
+  private WebhookRestClient webhookClient;
 
-    @Mock
-    private RestClient.RequestBodyUriSpec requestBodyUriSpec;
+  @BeforeEach
+  void setUp() {
+    webhookClient = new WebhookRestClient(restClient);
+  }
 
-    @Mock
-    private RestClient.RequestBodySpec requestBodySpec;
+  @Test
+  void sendWebhook_WhenSuccessful_ShouldReturnTrue() {
+    // Arrange
+    BaseEventDTO payload = new BaseEventDTO();
+    ResponseEntity<String> response = new ResponseEntity<>(SUCCESS_RESPONSE, HttpStatus.OK);
 
-    @Mock
-    private RestClient.ResponseSpec responseSpec;
+    when(restClient.post()).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+    when(requestBodySpec.body(any(BaseEventDTO.class))).thenReturn(requestBodySpec);
+    when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.toEntity(String.class)).thenReturn(response);
 
-    private WebhookRestClient webhookClient;
+    // Act
+    boolean result = webhookClient.sendWebhook(WEBHOOK_URL, payload);
 
-    private static final String WEBHOOK_URL = "http://test-url.com";
-    private static final String SUCCESS_RESPONSE = "Success";
-    private static final String ERROR_MESSAGE = "Connection refused";
+    // Assert
+    assertTrue(result);
+    verify(restClient).post();
+    verify(requestBodyUriSpec).uri(WEBHOOK_URL);
+    verify(requestBodySpec).body(payload);
+  }
 
-    @BeforeEach
-    void setUp() {
-        webhookClient = new WebhookRestClient(restClient);
-    }
+  @Test
+  void sendWebhook_WhenServerError_ShouldReturnFalse() {
+    // Arrange
+    BaseEventDTO payload = new BaseEventDTO();
+    ResponseEntity<String> response = new ResponseEntity<>(SUCCESS_RESPONSE, HttpStatus.INTERNAL_SERVER_ERROR);
 
-    @Test
-    void sendWebhook_WhenSuccessful_ShouldReturnTrue() {
-        // Arrange
-        BaseEventDTO payload = new BaseEventDTO();
-        ResponseEntity<String> response = new ResponseEntity<>(SUCCESS_RESPONSE, HttpStatus.OK);
+    when(restClient.post()).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+    when(requestBodySpec.body(any(BaseEventDTO.class))).thenReturn(requestBodySpec);
+    when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.toEntity(String.class)).thenReturn(response);
 
-        when(restClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any(BaseEventDTO.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(String.class)).thenReturn(response);
+    // Act
+    boolean result = webhookClient.sendWebhook(WEBHOOK_URL, payload);
 
-        // Act
-        boolean result = webhookClient.sendWebhook(WEBHOOK_URL, payload);
+    // Assert
+    assertFalse(result);
+    verify(restClient).post();
+    verify(requestBodyUriSpec).uri(WEBHOOK_URL);
+    verify(requestBodySpec).body(payload);
+  }
 
-        // Assert
-        assertTrue(result);
-        verify(restClient).post();
-        verify(requestBodyUriSpec).uri(WEBHOOK_URL);
-        verify(requestBodySpec).body(payload);
-    }
+  @Test
+  void sendWebhook_WhenExceptionOccurs_ShouldThrowException() {
+    // Arrange
+    BaseEventDTO payload = new BaseEventDTO();
 
-    @Test
-    void sendWebhook_WhenServerError_ShouldReturnFalse() {
-        // Arrange
-        BaseEventDTO payload = new BaseEventDTO();
-        ResponseEntity<String> response = new ResponseEntity<>(SUCCESS_RESPONSE, HttpStatus.INTERNAL_SERVER_ERROR);
+    when(restClient.post()).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+    when(requestBodySpec.body(any(BaseEventDTO.class))).thenReturn(requestBodySpec);
+    when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.toEntity(String.class)).thenThrow(new RuntimeException(ERROR_MESSAGE));
 
-        when(restClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any(BaseEventDTO.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(String.class)).thenReturn(response);
-
-        // Act
-        boolean result = webhookClient.sendWebhook(WEBHOOK_URL, payload);
-
-        // Assert
-        assertFalse(result);
-        verify(restClient).post();
-        verify(requestBodyUriSpec).uri(WEBHOOK_URL);
-        verify(requestBodySpec).body(payload);
-    }
-
-    @Test
-    void sendWebhook_WhenExceptionOccurs_ShouldThrowException() {
-        // Arrange
-        BaseEventDTO payload = new BaseEventDTO();
-
-        when(restClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any(BaseEventDTO.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(String.class)).thenThrow(new RuntimeException(ERROR_MESSAGE));
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> webhookClient.sendWebhook(WEBHOOK_URL, payload));
-        assertEquals(ERROR_MESSAGE, exception.getMessage());
-        verify(restClient).post();
-        verify(requestBodyUriSpec).uri(WEBHOOK_URL);
-        verify(requestBodySpec).body(payload);
-    }
+    // Act & Assert
+    RuntimeException exception = assertThrows(RuntimeException.class,
+        () -> webhookClient.sendWebhook(WEBHOOK_URL, payload));
+    assertEquals(ERROR_MESSAGE, exception.getMessage());
+    verify(restClient).post();
+    verify(requestBodyUriSpec).uri(WEBHOOK_URL);
+    verify(requestBodySpec).body(payload);
+  }
 }

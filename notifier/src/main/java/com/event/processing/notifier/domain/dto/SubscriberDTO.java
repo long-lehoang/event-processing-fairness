@@ -10,14 +10,14 @@ import java.util.Set;
  * Data Transfer Object for subscriber information.
  * This class represents the complete profile of a subscriber in the system,
  * including personal information, preferences, and subscription details.
- *
+ * <p>
  * The DTO includes:
  * - Basic subscriber information (ID, name, email)
  * - Subscription status and source
  * - Segmentation information
  * - Custom fields for additional data
  * - Opt-in and creation timestamps
- *
+ * <p>
  * Uses Lombok annotations for reducing boilerplate code and Jackson annotations
  * for JSON property mapping.
  *
@@ -112,8 +112,8 @@ public class SubscriberDTO {
    * @param createdAt      Creation timestamp
    */
   public SubscriberDTO(String id, String status, String email, String source,
-      String firstName, String lastName, String customFields,
-      String optinIp, Instant optinTimestamp, Instant createdAt) {
+                       String firstName, String lastName, String customFields,
+                       String optinIp, Instant optinTimestamp, Instant createdAt) {
     this.id = id;
     this.status = status;
     this.email = email;

@@ -6,7 +6,7 @@ import com.event.processing.notifier.domain.dto.BaseEventDTO;
  * Interface defining the contract for webhook delivery functionality.
  * This interface provides a standardized way to send webhook notifications
  * to external endpoints.
- *
+ * <p>
  * Key features:
  * - Webhook delivery to external URLs
  * - Event payload handling

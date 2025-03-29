@@ -10,7 +10,7 @@ import java.time.Instant;
  * Entity class representing a subscriber in the system.
  * This class defines the core subscriber information and preferences,
  * including personal details and subscription status.
- *
+ * <p>
  * Key features:
  * - Unique subscriber identification
  * - Required and unique email address
@@ -19,7 +19,7 @@ import java.time.Instant;
  * - Custom fields support
  * - Opt-in tracking
  * - Audit information inheritance
- *
+ * <p>
  * Uses JPA annotations for database mapping and Lombok annotations
  * for reducing boilerplate code.
  *

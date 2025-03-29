@@ -7,7 +7,7 @@ import com.event.processing.notifier.domain.dto.WebhookEventDTO;
  * Interface defining the contract for webhook notification processing.
  * This interface provides a standardized way to process webhook notifications
  * with retry capabilities for improved reliability.
- *
+ * <p>
  * Key features:
  * - Retry mechanism for failed webhook deliveries
  * - Event payload processing

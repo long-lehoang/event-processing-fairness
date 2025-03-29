@@ -21,13 +21,16 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static com.event.processing.notifier.util.PromeTheusMetricContants.METRIC_KAFKA_BATCH_PROCESSING_TIME;
+import static com.event.processing.notifier.util.PromeTheusMetricContants.METRIC_KAFKA_EVENT_PROCESSING_TIME;
+
 /**
  * Kafka-based implementation of the EventConsumer interface for processing
  * webhook events.
  * This class handles the consumption and processing of webhook events from
  * Kafka topics,
  * with support for batch processing, parallel execution, and monitoring.
- *
+ * <p>
  * Key features:
  * - Batch processing of webhook events
  * - Parallel processing using thread pool
@@ -44,9 +47,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class WebhookEventKafkaConsumer implements EventConsumer {
 
-  // Metrics Constants
-  private static final String METRIC_KAFKA_BATCH_PROCESSING_TIME = "kafka.batch.processing.time";
-  private static final String METRIC_KAFKA_EVENT_PROCESSING_TIME = "kafka.event.processing.time";
   // Dependency Injection
   private final WebhookEventProcessing eventProcessingService;
   private final WebhookEventService webhookEventService;
@@ -142,7 +142,7 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
     batchProcessingTimer.record(() -> {
       List<CompletableFuture<Void>> eventFutures = records.stream()
           .map(event -> CompletableFuture.supplyAsync(
-              () -> processSingleEvent(event, webhookUrlMap, payloadMap), kafkaConsumerExecutor)
+                  () -> processSingleEvent(event, webhookUrlMap, payloadMap), kafkaConsumerExecutor)
               .exceptionally(ex -> handleProcessingFailure(event.key(), ex)))
           .toList();
 

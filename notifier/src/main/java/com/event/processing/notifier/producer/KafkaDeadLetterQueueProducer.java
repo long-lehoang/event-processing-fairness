@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
  * This class manages the asynchronous publishing of failed events to a
  * Kafka-based dead letter queue,
  * providing detailed logging and error handling capabilities.
- *
+ * <p>
  * Key features:
  * - Asynchronous DLQ publishing
  * - Detailed logging of failed events

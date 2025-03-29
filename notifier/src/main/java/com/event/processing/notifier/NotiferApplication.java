@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Main application class for the Event Processing Notifier service.
  * This Spring Boot application handles event processing and notification
  * delivery.
- * 
+ * <p>
  * The application is structured with the following main components:
  * - Consumer: Handles incoming event messages
  * - Producer: Manages outgoing notifications

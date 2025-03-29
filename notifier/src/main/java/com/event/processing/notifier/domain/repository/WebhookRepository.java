@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
  * Repository interface for managing Webhook entities.
  * Provides database operations for webhook configurations and their
  * relationships with events.
- *
+ * <p>
  * Key features:
  * - Basic CRUD operations inherited from JpaRepository
  * - Webhook configuration management

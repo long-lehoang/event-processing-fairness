@@ -10,13 +10,13 @@ import java.time.Instant;
  * Entity class representing a subscriber creation event in the system.
  * This class tracks when new subscribers are created and which webhooks
  * should be notified about these events.
- *
+ * <p>
  * Key features:
  * - Unique event identification
  * - Event name and timing
  * - Subscriber reference
  * - Webhook reference
- *
+ * <p>
  * Uses JPA annotations for database mapping and Lombok annotations
  * for reducing boilerplate code.
  *

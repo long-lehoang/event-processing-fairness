@@ -10,7 +10,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * This class configures the thread pool used for Kafka consumer message
  * processing,
  * providing configurable thread pool properties for optimal performance.
- *
+ * <p>
  * Key features:
  * - Configurable core pool size
  * - Adjustable maximum pool size

@@ -8,7 +8,7 @@ import org.springframework.web.client.RestClient;
  * Configuration class for REST client settings.
  * This class provides configuration for the RestClient used in the application
  * for making HTTP requests to external services.
- *
+ * <p>
  * Key features:
  * - Singleton RestClient instance
  * - Thread-safe configuration

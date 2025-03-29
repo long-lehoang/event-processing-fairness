@@ -14,7 +14,7 @@ import java.util.Set;
  * Repository interface for managing SubscriberCreatedEvent entities.
  * Provides database operations for subscriber creation events and their
  * relationships with webhooks and subscribers.
- *
+ * <p>
  * Key features:
  * - Basic CRUD operations inherited from JpaRepository
  * - Custom queries for fetching event data with related entities
@@ -33,7 +33,7 @@ public interface SubscriberCreatedEventRepository extends JpaRepository<Subscrib
    *
    * @param eventIds Set of event IDs to fetch webhook URLs for
    * @return List of SubscriberPostUrlDTO objects containing event IDs and webhook
-   *         URLs
+   * URLs
    */
   @Query("""
         SELECT new com.event.processing.notifier.domain.dto.SubscriberPostUrlDTO(s.id, w.postUrl)
@@ -50,7 +50,7 @@ public interface SubscriberCreatedEventRepository extends JpaRepository<Subscrib
    *
    * @param eventIds Set of event IDs to fetch events for
    * @return List of SubscriberEventDTO objects containing event and subscriber
-   *         information
+   * information
    */
   @Query("""
         SELECT new com.event.processing.notifier.domain.dto.SubscriberEventDTO(

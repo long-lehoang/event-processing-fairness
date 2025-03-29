@@ -19,7 +19,7 @@ import java.util.Map;
  * This class configures the Kafka producer properties and creates necessary
  * beans
  * for producing messages to Kafka topics.
- *
+ * <p>
  * Key features:
  * - JSON serialization for WebhookEventDTO
  * - String key serialization

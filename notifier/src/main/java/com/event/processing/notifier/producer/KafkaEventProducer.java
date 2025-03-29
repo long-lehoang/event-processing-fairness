@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
  * This class handles the asynchronous publishing of webhook events to Kafka
  * topics
  * with monitoring and error handling capabilities.
- *
+ * <p>
  * Key features:
  * - Asynchronous event publishing
  * - Performance monitoring with metrics

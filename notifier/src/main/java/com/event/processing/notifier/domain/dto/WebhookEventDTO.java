@@ -10,12 +10,12 @@ import lombok.NoArgsConstructor;
  * Data Transfer Object for webhook events.
  * This class represents the structure of webhook events received from external
  * systems.
- *
+ * <p>
  * The DTO includes:
  * - Event identification
  * - Event type classification
  * - Associated account information
- *
+ * <p>
  * Uses Lombok annotations for reducing boilerplate code and Jackson annotations
  * for JSON property mapping.
  *

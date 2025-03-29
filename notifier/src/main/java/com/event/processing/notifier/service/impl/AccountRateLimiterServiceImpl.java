@@ -18,7 +18,7 @@ import java.util.Optional;
  * counter,
  * ensuring consistent rate limiting across multiple instances of the
  * application.
- *
+ * <p>
  * Key features:
  * - Redis-based distributed rate limiting
  * - Configurable rate limits and time windows
@@ -51,7 +51,7 @@ public class AccountRateLimiterServiceImpl implements RateLimiterService {
    *
    * @param accountId The unique identifier of the account to check
    * @return true if the account is within rate limits, false if rate limit
-   *         exceeded
+   * exceeded
    */
   @Override
   public boolean isAllow(String accountId) {

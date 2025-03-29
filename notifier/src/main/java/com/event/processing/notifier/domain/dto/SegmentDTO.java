@@ -8,12 +8,12 @@ import lombok.*;
  * Data Transfer Object for subscriber segments.
  * This class represents a segment or group that a subscriber belongs to,
  * used for categorization and targeting purposes.
- *
+ * <p>
  * The DTO includes:
  * - Segment identification
  * - Segment name
  * - Internal subscriber reference
- *
+ * <p>
  * Uses Lombok annotations for reducing boilerplate code and Jackson annotations
  * for JSON property mapping.
  *

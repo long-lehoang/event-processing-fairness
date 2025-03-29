@@ -13,7 +13,7 @@ import java.util.Set;
  * Repository interface for managing Segment entities.
  * Provides database operations for segments and their relationships with
  * subscribers.
- *
+ * <p>
  * Key features:
  * - Basic CRUD operations inherited from JpaRepository
  * - Custom query for fetching segments by subscriber IDs

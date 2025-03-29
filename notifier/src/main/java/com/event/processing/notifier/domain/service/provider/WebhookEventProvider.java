@@ -9,7 +9,7 @@ import java.util.Set;
  * Interface for webhook event providers.
  * This interface defines the contract for providers that handle different types
  * of webhook events and their associated data.
- *
+ * <p>
  * Key features:
  * - Event type support checking
  * - Webhook URL mapping

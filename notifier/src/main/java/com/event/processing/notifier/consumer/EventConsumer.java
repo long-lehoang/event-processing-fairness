@@ -12,7 +12,7 @@ import java.util.List;
  * This interface provides a standardized way to process webhook events in a
  * batch manner
  * with acknowledgment support.
- *
+ * <p>
  * Key features:
  * - Batch processing of webhook events
  * - Manual acknowledgment support

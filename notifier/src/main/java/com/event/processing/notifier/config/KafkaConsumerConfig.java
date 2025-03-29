@@ -21,7 +21,7 @@ import java.util.Map;
  * This class configures the Kafka consumer properties and creates necessary
  * beans
  * for consuming messages from Kafka topics.
- *
+ * <p>
  * Key features:
  * - Manual commit mode for better control over message processing
  * - Batch processing support

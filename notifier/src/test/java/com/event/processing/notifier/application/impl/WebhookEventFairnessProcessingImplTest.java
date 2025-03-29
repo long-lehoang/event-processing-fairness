@@ -14,7 +14,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -22,106 +21,100 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WebhookEventFairnessProcessingImplTest {
 
-    @Mock
-    private DeduplicationService deduplicationService;
+  private static final String EVENT_ID = "test-event-id";
+  private static final String WEBHOOK_URL = "http://test-url.com";
+  private static final String WEBHOOK_TOPIC = "webhook-events";
+  @Mock
+  private DeduplicationService deduplicationService;
+  @Mock
+  private RateLimiterService rateLimiterService;
+  @Mock
+  private WebhookService webhookService;
+  @Mock
+  private EventProducer eventProducer;
+  @Captor
+  private ArgumentCaptor<String> eventIdCaptor;
+  private WebhookEventFairnessProcessingImpl processor;
 
-    @Mock
-    private RateLimiterService rateLimiterService;
+  @BeforeEach
+  void setUp() {
+    processor = new WebhookEventFairnessProcessingImpl(
+        deduplicationService,
+        rateLimiterService,
+        webhookService,
+        eventProducer);
+  }
 
-    @Mock
-    private WebhookService webhookService;
+  @Test
+  void process_WhenEventIsDuplicate_ShouldSkipProcessing() {
+    // Arrange
+    WebhookEventDTO eventPayload = new WebhookEventDTO();
+    BaseEventDTO webhookPayload = new BaseEventDTO();
+    when(deduplicationService.isDuplicate(EVENT_ID)).thenReturn(true);
 
-    @Mock
-    private EventProducer eventProducer;
+    // Act
+    processor.process(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
 
-    @Captor
-    private ArgumentCaptor<String> eventIdCaptor;
+    // Assert
+    verify(deduplicationService).isDuplicate(EVENT_ID);
+    verifyNoInteractions(rateLimiterService, webhookService, eventProducer);
+  }
 
-    private WebhookEventFairnessProcessingImpl processor;
+  @Test
+  void process_WhenEventIsRateLimited_ShouldRepublishToQueue() {
+    // Arrange
+    WebhookEventDTO eventPayload = new WebhookEventDTO();
+    BaseEventDTO webhookPayload = new BaseEventDTO();
+    when(deduplicationService.isDuplicate(EVENT_ID)).thenReturn(false);
+    when(rateLimiterService.isAllow(EVENT_ID)).thenReturn(false);
 
-    private static final String EVENT_ID = "test-event-id";
-    private static final String WEBHOOK_URL = "http://test-url.com";
-    private static final String WEBHOOK_TOPIC = "webhook-events";
+    // Act
+    processor.process(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
 
-    @BeforeEach
-    void setUp() {
-        processor = new WebhookEventFairnessProcessingImpl(
-                deduplicationService,
-                rateLimiterService,
-                webhookService,
-                eventProducer);
-    }
+    // Assert
+    verify(deduplicationService).isDuplicate(EVENT_ID);
+    verify(rateLimiterService).isAllow(EVENT_ID);
+    verifyNoInteractions(webhookService);
+  }
 
-    @Test
-    void process_WhenEventIsDuplicate_ShouldSkipProcessing() {
-        // Arrange
-        WebhookEventDTO eventPayload = new WebhookEventDTO();
-        BaseEventDTO webhookPayload = new BaseEventDTO();
-        when(deduplicationService.isDuplicate(EVENT_ID)).thenReturn(true);
+  @Test
+  void process_WhenEventIsValid_ShouldProcessSuccessfully() {
+    // Arrange
+    WebhookEventDTO eventPayload = new WebhookEventDTO();
+    BaseEventDTO webhookPayload = new BaseEventDTO();
+    when(deduplicationService.isDuplicate(EVENT_ID)).thenReturn(false);
+    when(rateLimiterService.isAllow(EVENT_ID)).thenReturn(true);
+    doNothing().when(webhookService).processWithRetry(anyString(), any(), anyString(), any());
 
-        // Act
-        processor.process(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
+    // Act
+    processor.process(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
 
-        // Assert
-        verify(deduplicationService).isDuplicate(EVENT_ID);
-        verifyNoInteractions(rateLimiterService, webhookService, eventProducer);
-    }
+    // Assert
+    verify(deduplicationService).isDuplicate(EVENT_ID);
+    verify(rateLimiterService).isAllow(EVENT_ID);
+    verify(webhookService).processWithRetry(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
+    verify(deduplicationService).markProcessed(EVENT_ID);
+    verifyNoInteractions(eventProducer);
+  }
 
-    @Test
-    void process_WhenEventIsRateLimited_ShouldRepublishToQueue() {
-        // Arrange
-        WebhookEventDTO eventPayload = new WebhookEventDTO();
-        BaseEventDTO webhookPayload = new BaseEventDTO();
-        when(deduplicationService.isDuplicate(EVENT_ID)).thenReturn(false);
-        when(rateLimiterService.isAllow(EVENT_ID)).thenReturn(false);
+  @Test
+  void process_WhenProcessingFails_ShouldLogErrorAndNotMarkAsProcessed() {
+    // Arrange
+    WebhookEventDTO eventPayload = new WebhookEventDTO();
+    BaseEventDTO webhookPayload = new BaseEventDTO();
+    when(deduplicationService.isDuplicate(EVENT_ID)).thenReturn(false);
+    when(rateLimiterService.isAllow(EVENT_ID)).thenReturn(true);
+    doThrow(new RuntimeException("Processing failed"))
+        .when(webhookService).processWithRetry(anyString(), any(), anyString(), any());
 
-        // Act
-        processor.process(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
+    // Act
+    processor.process(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
 
-        // Assert
-        verify(deduplicationService).isDuplicate(EVENT_ID);
-        verify(rateLimiterService).isAllow(EVENT_ID);
-        verifyNoInteractions(webhookService);
-    }
-
-    @Test
-    void process_WhenEventIsValid_ShouldProcessSuccessfully() {
-        // Arrange
-        WebhookEventDTO eventPayload = new WebhookEventDTO();
-        BaseEventDTO webhookPayload = new BaseEventDTO();
-        when(deduplicationService.isDuplicate(EVENT_ID)).thenReturn(false);
-        when(rateLimiterService.isAllow(EVENT_ID)).thenReturn(true);
-        doNothing().when(webhookService).processWithRetry(anyString(), any(), anyString(), any());
-
-        // Act
-        processor.process(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
-
-        // Assert
-        verify(deduplicationService).isDuplicate(EVENT_ID);
-        verify(rateLimiterService).isAllow(EVENT_ID);
-        verify(webhookService).processWithRetry(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
-        verify(deduplicationService).markProcessed(EVENT_ID);
-        verifyNoInteractions(eventProducer);
-    }
-
-    @Test
-    void process_WhenProcessingFails_ShouldLogErrorAndNotMarkAsProcessed() {
-        // Arrange
-        WebhookEventDTO eventPayload = new WebhookEventDTO();
-        BaseEventDTO webhookPayload = new BaseEventDTO();
-        when(deduplicationService.isDuplicate(EVENT_ID)).thenReturn(false);
-        when(rateLimiterService.isAllow(EVENT_ID)).thenReturn(true);
-        doThrow(new RuntimeException("Processing failed"))
-                .when(webhookService).processWithRetry(anyString(), any(), anyString(), any());
-
-        // Act
-        processor.process(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
-
-        // Assert
-        verify(deduplicationService).isDuplicate(EVENT_ID);
-        verify(rateLimiterService).isAllow(EVENT_ID);
-        verify(webhookService).processWithRetry(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
-        verify(deduplicationService, never()).markProcessed(anyString());
-        verifyNoInteractions(eventProducer);
-    }
+    // Assert
+    verify(deduplicationService).isDuplicate(EVENT_ID);
+    verify(rateLimiterService).isAllow(EVENT_ID);
+    verify(webhookService).processWithRetry(EVENT_ID, eventPayload, WEBHOOK_URL, webhookPayload);
+    verify(deduplicationService, never()).markProcessed(anyString());
+    verifyNoInteractions(eventProducer);
+  }
 }

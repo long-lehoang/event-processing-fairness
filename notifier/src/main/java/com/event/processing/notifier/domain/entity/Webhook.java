@@ -8,13 +8,13 @@ import lombok.EqualsAndHashCode;
  * Entity class representing a webhook configuration in the system.
  * This class defines the webhook endpoints where event notifications
  * will be sent.
- *
+ * <p>
  * Key features:
  * - Unique webhook identification
  * - Webhook name for display purposes
  * - Post URL for event delivery
  * - Audit information inheritance
- *
+ * <p>
  * Uses JPA annotations for database mapping and Lombok annotations
  * for reducing boilerplate code.
  *
