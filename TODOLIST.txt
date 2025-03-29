@@ -1,3 +1,2 @@
-- Config k8s for run and monitoring at local with prometheus and grafana
 - Prepare data for test benchmark
 - Update docs/slide to presentation

@@ -3,6 +3,8 @@ kind: Ingress
 metadata:
   name: postgres-ingress
   namespace: {{ .Values.global.namespace }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
     - host: {{ .Values.ingress.host.postgres }}

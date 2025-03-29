@@ -1,13 +1,11 @@
 # Microservices Helm Chart
 
-This README provides guidelines to install Kubernetes, Ingress Controller, Helm, and ArgoCD for deploying microservices.
+This README provides guidelines to install Kubernetes, Ingress Controller, Helm for deploying microservices.
 
 ## Prerequisites
 
 - Kubernetes cluster
-- kubectl configured to interact with the cluster
 - Helm installed
-- ArgoCD installed
 
 ## Step 1: Install Kubernetes
 
@@ -26,44 +24,6 @@ Verify the installation:
 ```sh
 kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx
 ```
-
-## Step 3: Install Helm
-
-Follow the official Helm documentation to install Helm: [Helm Installation](https://helm.sh/docs/intro/install/)
-
-## Step 4: Install ArgoCD
-
-Install ArgoCD using the following commands:
-
-```sh
-kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-```
-
-Verify the installation:
-
-```sh
-kubectl get pods -n argocd
-```
-
-## Access ArgoCD
-
-To access the ArgoCD UI, run the following command:
-
-```sh
-kubectl port-forward svc/argocd-server -n argocd 8080:443
-```
-
-To get login ArgoCD Dashboard:
-username: 'admin'
-password: 
-```sh
-kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 -d
-```
-
-Access the UI at `https://localhost:8080`.
-
-## Conclusion
 
 You have successfully installed Kubernetes, Ingress Controller, Helm, and ArgoCD. You can now proceed to deploy your microservices using Helm charts.
 ## Alternative Step 2: Install Ingress Controller on Minikube
@@ -88,7 +48,16 @@ Start ingress:
 minikube tunnel
 ```
 
-## Step 5: Deploy Helm Chart
+
+## Step 3: Install Helm
+
+Follow the official Helm documentation to install Helm: [Helm Installation](https://helm.sh/docs/intro/install/)
+
+```shell
+brew install helm
+```
+
+## Step 4: Deploy Helm Chart
 
 To deploy the microservices Helm chart, use the following commands:
 
@@ -97,7 +66,7 @@ kubectl create namespace kafka
 kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
 kubectl apply -f https://strimzi.io/examples/latest/kafka/kraft/kafka-single-node.yaml -n kafka 
 cd helm-chart
-helm install webhook ./helm-chart -n kafka
+helm install webhook ./webhook-notifier -n kafka
 ```
 
 Verify the deployment:

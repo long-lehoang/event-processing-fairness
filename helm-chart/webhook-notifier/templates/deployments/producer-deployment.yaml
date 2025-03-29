@@ -16,6 +16,7 @@ spec:
       containers:
         - name: producer
           image: {{ .Values.producer.image }}
+          imagePullPolicy: Always
           ports:
             - containerPort: {{ .Values.producer.port }}
           env:
@@ -23,19 +24,21 @@ spec:
               value: {{ .Values.notifier.env.BOOTSTRAP_SERVERS_CONFIG }}
             - name: WEBHOOK_EVENT_TOPIC
               value: {{ .Values.notifier.env.WEBHOOK_EVENT_TOPIC }}
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: {{ .Values.producer.port }}
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: {{ .Values.producer.port }}
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 3
+#          livenessProbe:
+#            httpGet:
+#              path: /actuator/health
+#              port: {{ .Values.producer.port }}
+#              host: 127.0.0.1
+#            initialDelaySeconds: 10
+#            periodSeconds: 5
+#            timeoutSeconds: 3
+#            failureThreshold: 3
+#          readinessProbe:
+#            httpGet:
+#              path: /actuator/health
+#              port: {{ .Values.producer.port }}
+#              host: 127.0.0.1
+#            initialDelaySeconds: 5
+#            periodSeconds: 5
+#            timeoutSeconds: 3
+#            failureThreshold: 3

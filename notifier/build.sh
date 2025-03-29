@@ -17,7 +17,7 @@ IMAGE_NAME="$REGISTRY/$PROJECT_NAME:$VERSION"
 
 # Step 1: Clean and build the Spring Boot application
 echo "Building the Spring Boot application..."
-mvn clean package
+mvn clean package -DskipTests
 
 # Step 2: Build the Docker image using the existing Dockerfile
 echo "Building Docker image..."

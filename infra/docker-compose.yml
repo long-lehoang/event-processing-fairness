@@ -7,8 +7,8 @@ services:
     restart: always
     environment:
       POSTGRES_DB: webhook
-      POSTGRES_USER: postgre
-      POSTGRES_PASSWORD: postgre
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
@@ -65,16 +65,6 @@ services:
     volumes:
       - redis_data:/data
 
-  prometheus:
-    image: prom/prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-  grafana:
-    image: grafana/grafana
-    ports:
-      - "3000:3000"
 volumes:
   postgres_data:
     driver: local
