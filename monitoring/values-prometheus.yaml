@@ -232,7 +232,7 @@ alertmanager:
     ## Hosts must be provided if Ingress is enabled.
     ##
     hosts:
-      - alert.local
+      - alert.test
 
     ## Paths to use for ingress rules - one path should match the alertmanagerSpec.routePrefix
     ##
@@ -699,7 +699,7 @@ grafana:
     ## Must be provided if Ingress is enable.
     ##
     hosts:
-      - grafana.local
+      - grafana.test
     # hosts: []
 
     ## Path for grafana ingress
@@ -2011,7 +2011,7 @@ prometheus:
     ## Must be provided if Ingress is enabled.
     ##
     hosts:
-      - prometheus.local
+      - prometheus.test
     # hosts: []
 
     ## Paths to use for ingress rules - one path should match the prometheusSpec.routePrefix
@@ -2523,8 +2523,12 @@ prometheus:
       - job_name: notifier-job
         metrics_path: /actuator/prometheus
         scheme: http
-        static_configs:
-          - targets: [ 'notifier.kafka.svc.cluster.local:8080' ]
+        kubernetes_sd_configs:
+          - role: endpoints
+        relabel_configs:
+          - source_labels: [ __meta_kubernetes_service_name ]
+            regex: notifier
+            action: keep
 
 
     ## If additional scrape configurations are already deployed in a single secret file you can use this section.

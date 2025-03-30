@@ -8,7 +8,6 @@ import com.event.processing.notifier.service.WebhookService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,10 +55,9 @@ public class WebhookServiceImpl implements WebhookService {
    * @param webhookPayload The payload to be sent in the webhook
    */
   @Retry(name = "webhookRetry", fallbackMethod = "handleFailure")
-  @CircuitBreaker(name = "webhookCircuitBreaker", fallbackMethod = "handleCircuitBreak")
+  @CircuitBreaker(name = "#root.args[2]", fallbackMethod = "handleCircuitBreak")
   public void processWithRetry(String eventId, WebhookEventDTO eventPayload, String webhookUrl,
                                BaseEventDTO webhookPayload) {
-    Timer.Sample timer = Timer.start(meterRegistry);
     try {
       log.info("Sending webhook for event: {}", eventId);
       boolean success = webhookClient.sendWebhook(webhookUrl, webhookPayload);
@@ -68,12 +66,13 @@ public class WebhookServiceImpl implements WebhookService {
         throw new RuntimeException("Webhook response failed for event: " + eventId);
       }
       log.info("Webhook successfully processed for event: {}", eventId);
+      meterRegistry.counter(WEBHOOK_SUCCESS_COUNT).increment();
     } catch (Exception e) {
       log.error("Error processing webhook for event {}: {}", eventId, e.getMessage(), e);
       meterRegistry.counter(WEBHOOK_FAILURE_COUNT).increment();
       throw e;
     } finally {
-      timer.stop(meterRegistry.timer(WEBHOOK_EXECUTION_TIME));
+      meterRegistry.counter(WEBHOOK_EXECUTION_COUNT).increment();
     }
   }
 

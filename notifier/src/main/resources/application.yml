@@ -9,7 +9,7 @@ spring:
     topic:
       webhook-event:
         name: ${WEBHOOK_EVENT_TOPIC:webhook-events}
-        partitions: ${WEBHOOK_EVENT_TOPIC_PARTITIONS:3}
+        partitions: ${WEBHOOK_EVENT_TOPIC_PARTITIONS:4}
         replication-factor: ${WEBHOOK_EVENT_TOPIC_REPLICATION_FACTOR:1}
       dead-letter-queue-topic:
         name: ${WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC:webhook-event-dead-letter-queue}
@@ -21,7 +21,7 @@ spring:
       auto-offset-reset: earliest
       enable-auto-commit: false # We will manually commit after processing
       poll-timeout: 3000
-      max-poll-records: 20
+      max-poll-records: 100
     listener:
       concurrency: 1
     producer:

@@ -1,0 +1,5 @@
+event_id,event_type,account_id
+sce-1,subscriber.created,user-2
+sce-2,subscriber.created,user-3
+sce-3,subscriber.created,user-1
+sce-4,subscriber.created,user-1

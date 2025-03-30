@@ -117,7 +117,7 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
    * @return true if the event is rate limited, false otherwise
    */
   private boolean isRateLimited(String eventId, WebhookEventDTO payload) {
-    if (!rateLimiterService.isAllow(eventId)) {
+    if (!rateLimiterService.isAllow(payload.getAccountId())) {
       log.warn("Event {} is rate limited. Pushing back to queue.", eventId);
       eventProducer.publish(webhookEventTopic, eventId, payload);
       return true;

@@ -21,8 +21,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static com.event.processing.notifier.util.PromeTheusMetricContants.METRIC_KAFKA_BATCH_PROCESSING_TIME;
-import static com.event.processing.notifier.util.PromeTheusMetricContants.METRIC_KAFKA_EVENT_PROCESSING_TIME;
+import static com.event.processing.notifier.util.PromeTheusMetricContants.*;
 
 /**
  * Kafka-based implementation of the EventConsumer interface for processing
@@ -69,23 +68,26 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
   @KafkaListener(topics = "${spring.kafka.topic.webhook-event.name:webhook-events}", groupId = "webhook-group", containerFactory = "kafkaListenerContainerFactory")
   @Override
   public void consume(List<ConsumerRecord<String, WebhookEventDTO>> records, Acknowledgment acknowledgment) {
-    if (records.isEmpty()) {
-      log.warn("No events received, skipping processing.");
-      return;
-    }
+    Timer batchProcessingTimer = meterRegistry.timer(METRIC_KAFKA_BATCH_PROCESSING_TIME);
+    batchProcessingTimer.record(() -> {
+      if (records.isEmpty()) {
+        log.warn("No events received, skipping processing.");
+        return;
+      }
 
-    log.info("Received {} events", records.size());
+      log.info("Received {} events", records.size());
 
-    Map<String, List<ConsumerRecord<String, WebhookEventDTO>>> eventsByType = groupEventsByType(records);
+      Map<String, List<ConsumerRecord<String, WebhookEventDTO>>> eventsByType = groupEventsByType(records);
 
-    List<CompletableFuture<Void>> futures = eventsByType.entrySet().stream()
-        .map(entry -> CompletableFuture.runAsync(() -> processEventGroup(entry.getKey(), entry.getValue()),
-            kafkaConsumerExecutor))
-        .toList();
+      List<CompletableFuture<Void>> futures = eventsByType.entrySet().stream()
+          .map(entry -> CompletableFuture.runAsync(() -> processEventGroup(entry.getKey(), entry.getValue()),
+              kafkaConsumerExecutor))
+          .toList();
 
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-        .thenRun(() -> acknowledge(acknowledgment, records.size()))
-        .join(); // Ensure we wait before acknowledging
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+          .thenRun(() -> acknowledge(acknowledgment, records.size()))
+          .join(); // Ensure we wait before acknowledging
+    });
   }
 
   /**
@@ -138,17 +140,15 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
       List<ConsumerRecord<String, WebhookEventDTO>> records,
       Map<String, String> webhookUrlMap,
       Map<String, BaseEventDTO> payloadMap) {
-    Timer batchProcessingTimer = meterRegistry.timer(METRIC_KAFKA_BATCH_PROCESSING_TIME);
-    batchProcessingTimer.record(() -> {
-      List<CompletableFuture<Void>> eventFutures = records.stream()
-          .map(event -> CompletableFuture.supplyAsync(
-                  () -> processSingleEvent(event, webhookUrlMap, payloadMap), kafkaConsumerExecutor)
-              .exceptionally(ex -> handleProcessingFailure(event.key(), ex)))
-          .toList();
 
-      // Ensure all events are processed before moving forward
-      CompletableFuture.allOf(eventFutures.toArray(new CompletableFuture[0])).join();
-    });
+    List<CompletableFuture<Void>> eventFutures = records.stream()
+        .map(event -> CompletableFuture.supplyAsync(
+                () -> processSingleEvent(event, webhookUrlMap, payloadMap), kafkaConsumerExecutor)
+            .exceptionally(ex -> handleProcessingFailure(event.key(), ex)))
+        .toList();
+
+    // Ensure all events are processed before moving forward
+    CompletableFuture.allOf(eventFutures.toArray(new CompletableFuture[0])).join();
   }
 
   /**
@@ -194,6 +194,9 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
       ConsumerRecord<String, WebhookEventDTO> event,
       Map<String, String> webhookUrlMap,
       Map<String, BaseEventDTO> payloadMap) {
+
+    meterRegistry.counter(KAFKA_EVENT_COUNT).increment();
+
     String eventId = event.key();
     WebhookEventDTO eventPayload = event.value();
 
@@ -210,15 +213,12 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
       return null;
     }
 
-    Timer eventProcessingTimer = meterRegistry.timer(METRIC_KAFKA_EVENT_PROCESSING_TIME, "eventId", eventId);
-    eventProcessingTimer.record(() -> {
-      try {
-        eventProcessingService.process(eventId, eventPayload, url, webhookPayload);
-        log.debug("Successfully processed event {}", eventId);
-      } catch (Exception e) {
-        log.error("Failed to process event {}", eventId, e);
-      }
-    });
+    try {
+      eventProcessingService.process(eventId, eventPayload, url, webhookPayload);
+      log.debug("Successfully processed event {}", eventId);
+    } catch (Exception e) {
+      log.error("Failed to process event {}", eventId, e);
+    }
 
     return null;
   }

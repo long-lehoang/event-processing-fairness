@@ -45,7 +45,7 @@ public class SubscriberCreatedEventProviderImpl implements WebhookEventProvider 
    */
   @Override
   public boolean supports(String eventType) {
-    return this.EVENT_TYPE.equals(eventType);
+    return EVENT_TYPE.equals(eventType);
   }
 
   /**

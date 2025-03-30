@@ -59,13 +59,14 @@ public class AccountRateLimiterServiceImpl implements RateLimiterService {
     ValueOperations<String, String> ops = redisTemplate.opsForValue();
 
     try {
-      long currentCount = Optional.of(ops.increment(key, 1)).orElse(1L);
+      long currentCount = Optional.of(ops.increment(key, 1L)).orElse(1L);
 
       if (currentCount == 1) {
         redisTemplate.expire(key, Duration.ofMinutes(rateLimitProperties.getTime()));
       }
 
       boolean allowed = currentCount <= rateLimitProperties.getEvent();
+      log.debug("Current count of RateLimit for {} is {}", accountId, currentCount);
       if (!allowed) {
         log.warn("Rate limit exceeded for account: {}", accountId);
       }

@@ -9,6 +9,6 @@ public class KafkaTopicConfig {
 
   @Bean
   public NewTopic webhookEventsTopic() {
-    return new NewTopic("webhook-events", 3, (short) 1); // 3 partitions, 1 replication
+    return new NewTopic("webhook-events", 4, (short) 1); // 3 partitions, 1 replication
   }
 }
