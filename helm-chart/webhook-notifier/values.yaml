@@ -8,7 +8,7 @@ producer:
 
 notifier:
   replicaCount: 2
-  image: longbale1999/webhook-notifier:1.0.7
+  image: longbale1999/webhook-notifier:1.0.8
   service:
     type: ClusterIP
     port: 8080

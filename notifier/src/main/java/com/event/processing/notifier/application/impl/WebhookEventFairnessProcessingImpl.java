@@ -7,10 +7,15 @@ import com.event.processing.notifier.producer.EventProducer;
 import com.event.processing.notifier.service.DeduplicationService;
 import com.event.processing.notifier.service.RateLimiterService;
 import com.event.processing.notifier.service.WebhookService;
+import com.event.processing.notifier.util.RateLimitProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of WebhookEventProcessing that provides fairness-aware event
@@ -34,6 +39,9 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessing {
+
+  private final RateLimitProperties rateLimitProperties;
+  private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
   /**
    * Service for detecting and handling duplicate events.
@@ -119,7 +127,14 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
   private boolean isRateLimited(String eventId, WebhookEventDTO payload) {
     if (!rateLimiterService.isAllow(payload.getAccountId())) {
       log.warn("Event {} is rate limited. Pushing back to queue.", eventId);
-      eventProducer.publish(webhookEventTopic, eventId, payload);
+
+      scheduler.schedule(() -> {
+        try {
+          eventProducer.publish(webhookEventTopic, eventId, payload);
+        } catch (Exception e) {
+          log.error("Failed to publish delayed event {} to Kafka", eventId, e);
+        }
+      }, rateLimitProperties.getTime(), TimeUnit.MINUTES);
       return true;
     }
     return false;

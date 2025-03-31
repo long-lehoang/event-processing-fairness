@@ -21,7 +21,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static com.event.processing.notifier.util.PromeTheusMetricContants.*;
+import static com.event.processing.notifier.util.PromeTheusMetricContants.KAFKA_EVENT_COUNT;
+import static com.event.processing.notifier.util.PromeTheusMetricContants.METRIC_KAFKA_BATCH_PROCESSING_TIME;
 
 /**
  * Kafka-based implementation of the EventConsumer interface for processing

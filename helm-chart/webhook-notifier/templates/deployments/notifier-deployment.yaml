@@ -2,8 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notifier
-  labels:
-    app: notifier
+  namespace: {{ .Values.global.namespace }}
 spec:
   replicas: {{ .Values.notifier.replicaCount }}
   selector:
@@ -22,6 +21,13 @@ spec:
         - name: notifier
           image: {{ .Values.notifier.image }}
           imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "250m"     # Request 0.25 vCPU
+              memory: "512Mi" # Request 512MB RAM
+            limits:
+              cpu: "500m"     # Max 0.5 vCPU
+              memory: "1Gi"   # Max 1GB RAM
           ports:
             - containerPort: {{ .Values.notifier.service.port }}
 #          livenessProbe:
