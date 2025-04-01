@@ -1,1 +1,5 @@
-- Update docs/slide to presentation
+- config alert
+- check circuit break to understand config
+- Re gen data for run 10.000 events
+- Double everything.
+- Submit !!!
