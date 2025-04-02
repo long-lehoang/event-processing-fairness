@@ -6,10 +6,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Redis-based implementation of RateLimiterService for account-level rate
@@ -37,6 +40,34 @@ public class AccountRateLimiterServiceImpl implements RateLimiterService {
    * Prefix used for Redis keys to identify rate limit counters.
    */
   private static final String RATE_LIMIT_KEY_PREFIX = "rate-limit:";
+  
+  /**
+   * Lua script for atomically checking and incrementing rate limit counters.
+   * Optimizes the batch operation by using a single Redis call.
+   */
+  private static final String CHECK_AND_INCREMENT_SCRIPT = 
+      "local key = KEYS[1] " +
+      "local count = tonumber(ARGV[1]) " +
+      "local limit = tonumber(ARGV[2]) " +
+      "local ttl = tonumber(ARGV[3]) " +
+      "local exists = redis.call('EXISTS', key) " +
+      "local current = 0 " +
+      "if exists == 0 then " +
+      "  redis.call('SET', key, count, 'EX', ttl) " +
+      "  return 1 " + 
+      "else " +
+      "  current = tonumber(redis.call('GET', key)) " +
+      "  if (current + count) <= limit then " +
+      "    redis.call('INCRBY', key, count) " +
+      "    local keyTTL = redis.call('TTL', key) " +
+      "    if keyTTL == -1 then " +
+      "      redis.call('EXPIRE', key, ttl) " +
+      "    end " +
+      "    return 1 " +
+      "  else " +
+      "    return 0 " +
+      "  end " +
+      "end";
 
   private final StringRedisTemplate redisTemplate;
   private final RateLimitProperties rateLimitProperties;
@@ -55,25 +86,42 @@ public class AccountRateLimiterServiceImpl implements RateLimiterService {
    */
   @Override
   public boolean isAllow(String accountId) {
+    return areEventsAllowed(accountId, 1);
+  }
+  
+  /**
+   * Checks if multiple events for an account can be processed without exceeding rate limits.
+   * This method efficiently uses a Lua script to perform the check and increment in a single
+   * Redis operation, reducing network overhead for batch operations.
+   *
+   * @param accountId The account ID to check
+   * @param count The number of events to check
+   * @return true if the events can be processed without exceeding rate limits, false otherwise
+   */
+  @Override
+  public boolean areEventsAllowed(String accountId, int count) {
     String key = RATE_LIMIT_KEY_PREFIX + accountId;
-    ValueOperations<String, String> ops = redisTemplate.opsForValue();
-
+    long expiryTime = TimeUnit.MINUTES.toSeconds(rateLimitProperties.getTime());
+    long eventLimit = rateLimitProperties.getEvent();
+    
     try {
-      long currentCount = Optional.of(ops.increment(key, 1L)).orElse(1L);
-
-      if (currentCount == 1) {
-        redisTemplate.expire(key, Duration.ofMinutes(rateLimitProperties.getTime()));
+      // Use Lua script to atomically check and increment counter
+      Boolean allowed = redisTemplate.execute(
+          RedisScript.of(CHECK_AND_INCREMENT_SCRIPT, Boolean.class),
+          Collections.singletonList(key),
+          String.valueOf(count),
+          String.valueOf(eventLimit),
+          String.valueOf(expiryTime)
+      );
+      
+      if (Boolean.FALSE.equals(allowed)) {
+        log.warn("Rate limit exceeded for account: {}. Attempted to process {} events", accountId, count);
+        return false;
       }
-
-      boolean allowed = currentCount <= rateLimitProperties.getEvent();
-      log.debug("Current count of RateLimit for {} is {}", accountId, currentCount);
-      if (!allowed) {
-        log.warn("Rate limit exceeded for account: {}", accountId);
-      }
-      return allowed;
-
+      
+      return true;
     } catch (Exception e) {
-      log.error("Error checking rate limit for account: {}", accountId, e);
+      log.error("Error checking rate limit for account: {} with count {}", accountId, count, e);
       return true; // Fail-safe: Allow request in case of Redis failure
     }
   }

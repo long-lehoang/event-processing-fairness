@@ -5,9 +5,7 @@ import com.event.processing.notifier.domain.dto.BaseEventDTO;
 import com.event.processing.notifier.domain.dto.WebhookEventDTO;
 import com.event.processing.notifier.producer.EventProducer;
 import com.event.processing.notifier.service.DeduplicationService;
-import com.event.processing.notifier.service.RateLimiterService;
 import com.event.processing.notifier.service.WebhookService;
-import com.event.processing.notifier.util.RateLimitProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,14 +20,10 @@ import java.util.concurrent.TimeUnit;
  * processing.
  * This class ensures fair processing of webhook events by implementing:
  * - Deduplication to prevent duplicate processing
- * - Rate limiting to control event processing rate
- * - Retry mechanism for failed deliveries
- * - Event republishing for rate-limited events
+ * - Event processing with delivery retries
  * <p>
  * Key features:
  * - Duplicate event detection and handling
- * - Rate limiting with queue-based backoff
- * - Retry mechanism for failed webhook deliveries
  * - Comprehensive logging and error handling
  *
  * @author LongLe
@@ -40,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessing {
 
-  private final RateLimitProperties rateLimitProperties;
   private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
   /**
@@ -49,17 +42,12 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
   private final DeduplicationService deduplicationService;
 
   /**
-   * Service for managing rate limits on event processing.
-   */
-  private final RateLimiterService rateLimiterService;
-
-  /**
    * Service for handling webhook delivery and retries.
    */
   private final WebhookService webhookService;
 
   /**
-   * Producer for republishing rate-limited events.
+   * Producer for republishing events.
    */
   private final EventProducer eventProducer;
 
@@ -74,7 +62,6 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
    * Processes a webhook event with fairness guarantees.
    * This method:
    * - Checks for duplicate events
-   * - Applies rate limiting
    * - Handles webhook delivery with retries
    * - Manages event state and logging
    *
@@ -88,8 +75,6 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
     log.info("Processing event: {}", eventId);
 
     if (isDuplicate(eventId))
-      return;
-    if (isRateLimited(eventId, eventPayload))
       return;
 
     try {
@@ -110,31 +95,6 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
   private boolean isDuplicate(String eventId) {
     if (deduplicationService.isDuplicate(eventId)) {
       log.warn("Skipping duplicate event: {}", eventId);
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Checks if an event is rate limited and should be republished.
-   * If rate limited, the event is republished to the Kafka topic for later
-   * processing.
-   *
-   * @param eventId The unique identifier of the event
-   * @param payload The webhook event payload
-   * @return true if the event is rate limited, false otherwise
-   */
-  private boolean isRateLimited(String eventId, WebhookEventDTO payload) {
-    if (!rateLimiterService.isAllow(payload.getAccountId())) {
-      log.warn("Event {} is rate limited. Pushing back to queue.", eventId);
-
-      scheduler.schedule(() -> {
-        try {
-          eventProducer.publish(webhookEventTopic, eventId, payload);
-        } catch (Exception e) {
-          log.error("Failed to publish delayed event {} to Kafka", eventId, e);
-        }
-      }, rateLimitProperties.getTime(), TimeUnit.MINUTES);
       return true;
     }
     return false;

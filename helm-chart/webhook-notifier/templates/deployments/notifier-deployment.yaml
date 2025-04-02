@@ -82,10 +82,10 @@ spec:
               value: {{ .Values.notifier.env.REDIS_HOST }}
             - name: REDIS_PORT
               value: "{{ .Values.notifier.env.REDIS_PORT }}"
-            - name: REDIS_EVENT_LIMIT
-              value: "{{ .Values.notifier.env.REDIS_EVENT_LIMIT }}"
-            - name: REDIS_TIME_LIMIT
-              value: "{{ .Values.notifier.env.REDIS_TIME_LIMIT }}"
+            - name: LIMIT_EVENT_COUNT
+              value: "{{ .Values.notifier.env.LIMIT_EVENT_COUNT }}"
+            - name: LIMIT_EVENT_DURATION
+              value: "{{ .Values.notifier.env.LIMIT_EVENT_DURATION }}"
 
             # Resilience4j Circuit Breaker Config
             - name: WEBHOOK_RETRY_MAX_ATTEMPTS

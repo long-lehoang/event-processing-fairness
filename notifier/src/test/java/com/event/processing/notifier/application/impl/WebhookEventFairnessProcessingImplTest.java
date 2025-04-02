@@ -45,9 +45,7 @@ class WebhookEventFairnessProcessingImplTest {
   @BeforeEach
   void setUp() {
     processor = new WebhookEventFairnessProcessingImpl(
-        rateLimitProperties,
         deduplicationService,
-        rateLimiterService,
         webhookService,
         eventProducer);
   }

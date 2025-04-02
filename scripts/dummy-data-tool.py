@@ -64,11 +64,11 @@ def generate_sql_batch_inserts(output_file="test_data.sql"):
         f.write("-- Batch Insert into webhook table\n")
         webhooks = [
             ('wh-1', base_date + timedelta(hours=1), 'user-1', 'User1 Success Hook', 'http://host.docker.internal:8085/webhooks/success'),
-            ('wh-2', base_date + timedelta(hours=2), 'user-1', 'User1 Failed Hook', 'http://host.docker.internal:8085/webhooks/failed'),
+            ('wh-2', base_date + timedelta(hours=2), 'user-1', 'User1 Success Hook', 'http://host.docker.internal:8085/webhooks/success'),
             ('wh-3', base_date + timedelta(hours=3), 'user-2', 'User2 Success Hook', 'http://host.docker.internal:8085/webhooks/success'),
-            ('wh-4', base_date + timedelta(hours=4), 'user-2', 'User2 Failed Hook', 'http://host.docker.internal:8085/webhooks/failed'),
+            ('wh-4', base_date + timedelta(hours=4), 'user-2', 'User2 Success Hook', 'http://host.docker.internal:8085/webhooks/success'),
             ('wh-5', base_date + timedelta(hours=5), 'user-3', 'User3 Success Hook', 'http://host.docker.internal:8085/webhooks/success'),
-            ('wh-6', base_date + timedelta(hours=6), 'user-3', 'User3 Failed Hook', 'http://host.docker.internal:8085/webhooks/failed')
+            ('wh-6', base_date + timedelta(hours=6), 'user-3', 'User3 Success Hook', 'http://host.docker.internal:8085/webhooks/success')
         ]
         f.write("INSERT INTO public.webhook (id, created_at, created_by, \"name\", post_url) VALUES\n")
         f.write(",\n".join(
@@ -79,7 +79,7 @@ def generate_sql_batch_inserts(output_file="test_data.sql"):
         # 5. subscriber_created_event Table (896 records)
         f.write("-- Batch Insert into subscriber_created_event table\n")
         subscriber_events = []
-        for i in range(1, 897):
+        for i in range(1, 10000):
             sub_id = f"sub-{random.randint(1, 50)}"
             wh_id = f"wh-{random.randint(1, 6)}"
             event_time = base_date + timedelta(days=random.randint(0, 450), hours=random.randint(0, 23))

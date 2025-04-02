@@ -4,6 +4,8 @@ import com.event.processing.notifier.application.WebhookEventProcessing;
 import com.event.processing.notifier.domain.dto.BaseEventDTO;
 import com.event.processing.notifier.domain.dto.WebhookEventDTO;
 import com.event.processing.notifier.domain.service.WebhookEventService;
+import com.event.processing.notifier.producer.EventProducer;
+import com.event.processing.notifier.service.RateLimiterService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,8 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +56,8 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
   private final WebhookEventService webhookEventService;
   private final MeterRegistry meterRegistry;
   private final ThreadPoolTaskExecutor kafkaConsumerExecutor;
+  private final RateLimiterService rateLimiterService;
+  private final EventProducer eventProducer;
 
   @Value("${spring.kafka.topic.webhook-event.name:webhook-events}")
   private String topic;
@@ -69,6 +75,7 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
   @KafkaListener(topics = "${spring.kafka.topic.webhook-event.name:webhook-events}", groupId = "webhook-group", containerFactory = "kafkaListenerContainerFactory")
   @Override
   public void consume(List<ConsumerRecord<String, WebhookEventDTO>> records, Acknowledgment acknowledgment) {
+    meterRegistry.counter(KAFKA_EVENT_COUNT).increment(records.size());
     Timer batchProcessingTimer = meterRegistry.timer(METRIC_KAFKA_BATCH_PROCESSING_TIME);
     batchProcessingTimer.record(() -> {
       if (records.isEmpty()) {
@@ -106,7 +113,7 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
   /**
    * Processes a group of events of the same type.
    * Fetches webhook URLs and payloads for the events and initiates batch
-   * processing.
+   * processing after checking for rate limits in batches.
    *
    * @param eventType  The type of events being processed
    * @param eventGroup List of consumer records for the event type
@@ -116,17 +123,47 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
         .map(record -> record.value().getEventId())
         .collect(Collectors.toSet());
 
+    // Group events by account ID for batch rate limit checking
+    Map<String, List<ConsumerRecord<String, WebhookEventDTO>>> eventsByAccount = eventGroup.stream()
+        .collect(Collectors.groupingBy(record -> record.value().getAccountId()));
+
+    // Perform batch rate limit checks and filter events
+    List<ConsumerRecord<String, WebhookEventDTO>> allowedEvents = new ArrayList<>();
+    
+    eventsByAccount.forEach((accountId, accountEvents) -> {
+      int eventCount = accountEvents.size();
+      if (rateLimiterService.areEventsAllowed(accountId, eventCount)) {
+        allowedEvents.addAll(accountEvents);
+      } else {
+        // Republish rate-limited events back to Kafka
+        log.warn("Rate limited {} events for account {}", eventCount, accountId);
+        accountEvents.forEach(event -> 
+            eventProducer.publish(topic, event.key(), event.value()));
+      }
+    });
+
+    // If there are no allowed events after rate limiting, return early
+    if (allowedEvents.isEmpty()) {
+      log.info("No events to process after rate limiting checks");
+      return;
+    }
+
+    // Continue with regular processing for allowed events
     Map<String, BaseEventDTO> payloadMap;
     Map<String, String> webhookUrlMap;
     try {
-      payloadMap = webhookEventService.getPayloads(eventType, eventIds);
-      webhookUrlMap = webhookEventService.getWebhookUrls(eventType, eventIds);
+      Set<String> allowedEventIds = allowedEvents.stream()
+          .map(record -> record.value().getEventId())
+          .collect(Collectors.toSet());
+      
+      payloadMap = webhookEventService.getPayloads(eventType, allowedEventIds);
+      webhookUrlMap = webhookEventService.getWebhookUrls(eventType, allowedEventIds);
     } catch (Exception e) {
       log.error("Failed to fetch event data from DB for event type: {}", eventType, e);
       return;
     }
 
-    processBatch(eventGroup, webhookUrlMap, payloadMap);
+    processBatch(allowedEvents, webhookUrlMap, payloadMap);
   }
 
   /**
@@ -195,8 +232,6 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
       ConsumerRecord<String, WebhookEventDTO> event,
       Map<String, String> webhookUrlMap,
       Map<String, BaseEventDTO> payloadMap) {
-
-    meterRegistry.counter(KAFKA_EVENT_COUNT).increment();
 
     String eventId = event.key();
     WebhookEventDTO eventPayload = event.value();

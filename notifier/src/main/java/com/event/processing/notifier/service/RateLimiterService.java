@@ -26,4 +26,14 @@ public interface RateLimiterService {
    * rate limited
    */
   boolean isAllow(String eventId);
+  
+  /**
+   * Checks if multiple events from the same account are allowed to be processed based on rate limiting rules.
+   * This method optimizes Redis connections by checking all events in a single operation.
+   *
+   * @param accountId The account ID to check
+   * @param count The number of events to check
+   * @return true if the events are allowed to be processed, false if they would exceed the rate limit
+   */
+  boolean areEventsAllowed(String accountId, int count);
 }

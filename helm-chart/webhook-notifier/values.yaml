@@ -8,7 +8,7 @@ producer:
 
 notifier:
   replicaCount: 2
-  image: longbale1999/webhook-notifier:1.0.8
+  image: longbale1999/webhook-notifier:1.1.3
   service:
     type: ClusterIP
     port: 8080
@@ -30,8 +30,8 @@ notifier:
     # Redis Config
     REDIS_HOST: "redis"
     REDIS_PORT: 6379
-    REDIS_EVENT_LIMIT: 100
-    REDIS_TIME_LIMIT: 1  # 1 minute
+    LIMIT_EVENT_COUNT: 2000
+    LIMIT_EVENT_DURATION: 1  # 1 minute
     # Resilience4j Circuit Breaker Config
     WEBHOOK_RETRY_MAX_ATTEMPTS: 5
     WEBHOOK_RETRY_WAIT_DURATION: "2s"
