@@ -3,144 +3,175 @@ package com.event.processing.notifier.service.impl;
 import com.event.processing.notifier.util.RateLimitProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
-import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("AccountRateLimiterServiceImpl Tests")
 class AccountRateLimiterServiceImplTest {
 
-  private static final String ACCOUNT_ID = "test-account-id";
-  private static final String EXPECTED_KEY = "rate-limit:" + ACCOUNT_ID;
-  private static final int MAX_EVENTS = 100;
-  private static final int TIME_WINDOW_MINUTES = 5;
-  @Mock
-  private StringRedisTemplate redisTemplate;
-  @Mock
-  private ValueOperations<String, String> valueOperations;
-  @Mock
-  private RateLimitProperties rateLimitProperties;
-  private AccountRateLimiterServiceImpl rateLimiterService;
+    private static final String ACCOUNT_ID = "test-account-123";
+    private static final String RATE_LIMIT_KEY_PREFIX = "rate-limit:";
+    private static final String EXPECTED_REDIS_KEY = RATE_LIMIT_KEY_PREFIX + ACCOUNT_ID;
 
-  @BeforeEach
-  void setUp() {
-    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-    when(rateLimitProperties.getEvent()).thenReturn(MAX_EVENTS);
-    lenient().when(rateLimitProperties.getTime()).thenReturn(TIME_WINDOW_MINUTES);
-    rateLimiterService = new AccountRateLimiterServiceImpl(redisTemplate, rateLimitProperties);
-  }
+    @Mock
+    private StringRedisTemplate redisTemplate;
 
-  @Nested
-  @DisplayName("isAllow Tests")
-  class IsAllowTests {
+    @Mock
+    private RateLimitProperties rateLimitProperties;
 
-    @Test
-    @DisplayName("Should allow request when within rate limit")
-    void shouldAllowRequestWhenWithinRateLimit() {
-      // Arrange
-      when(valueOperations.increment(anyString(), eq(1L))).thenReturn(1L);
+    @Captor
+    private ArgumentCaptor<RedisScript<Boolean>> scriptCaptor;
 
-      // Act
-      boolean result = rateLimiterService.isAllow(ACCOUNT_ID);
+    @Captor
+    private ArgumentCaptor<List<String>> keysCaptor;
 
-      // Assert
-      assertThat(result).isTrue();
-      verify(valueOperations).increment(EXPECTED_KEY, 1L);
-      verify(redisTemplate).expire(eq(EXPECTED_KEY), eq(Duration.ofMinutes(TIME_WINDOW_MINUTES)));
+    @Captor
+    private ArgumentCaptor<String[]> argsCaptor;
+
+    private AccountRateLimiterServiceImpl rateLimiterService;
+
+    @BeforeEach
+    void setUp() {
+        rateLimiterService = new AccountRateLimiterServiceImpl(redisTemplate, rateLimitProperties);
+        
+        // Set default properties
+        when(rateLimitProperties.getEvent()).thenReturn(100);
+        when(rateLimitProperties.getTime()).thenReturn(1);
     }
 
     @Test
-    @DisplayName("Should not allow request when rate limit exceeded")
-    void shouldNotAllowRequestWhenRateLimitExceeded() {
-      // Arrange
-      when(valueOperations.increment(anyString(), eq(1L))).thenReturn(MAX_EVENTS + 1L);
+    @DisplayName("isAllow should call areEventsAllowed with count 1")
+    void isAllow_ShouldCallAreEventsAllowedWithCountOne() {
+        // Arrange
+        when(redisTemplate.execute(
+            any(RedisScript.class),
+            anyList(),
+            any(String[].class)
+        )).thenReturn(true);
 
-      // Act
-      boolean result = rateLimiterService.isAllow(ACCOUNT_ID);
+        // Act
+        boolean result = rateLimiterService.isAllow(ACCOUNT_ID);
 
-      // Assert
-      assertThat(result).isFalse();
-      verify(valueOperations).increment(EXPECTED_KEY, 1L);
+        // Assert
+        assertTrue(result);
+        verify(redisTemplate).execute(
+            any(RedisScript.class),
+            eq(Collections.singletonList(EXPECTED_REDIS_KEY)),
+            eq(new String[]{"1", "100", "60"})
+        );
     }
 
     @Test
-    @DisplayName("Should handle null increment result")
-    void shouldHandleNullIncrementResult() {
-      // Arrange
-      when(valueOperations.increment(anyString(), eq(1))).thenReturn(null);
+    @DisplayName("areEventsAllowed should return true when Redis allows the operation")
+    void areEventsAllowed_ShouldReturnTrue_WhenRedisAllowsOperation() {
+        // Arrange
+        int count = 5;
+        when(redisTemplate.execute(
+            any(RedisScript.class),
+            anyList(),
+            any(String[].class)
+        )).thenReturn(true);
 
-      // Act
-      boolean result = rateLimiterService.isAllow(ACCOUNT_ID);
+        // Act
+        boolean result = rateLimiterService.areEventsAllowed(ACCOUNT_ID, count);
 
-      // Assert
-      assertThat(result).isTrue();
-      verify(valueOperations).increment(EXPECTED_KEY, 1);
+        // Assert
+        assertTrue(result);
+        verify(redisTemplate).execute(
+            any(RedisScript.class),
+            eq(Collections.singletonList(EXPECTED_REDIS_KEY)),
+            eq(new String[]{String.valueOf(count), "100", "60"})
+        );
     }
 
     @Test
-    @DisplayName("Should handle Redis operation failure")
-    void shouldHandleRedisOperationFailure() {
-      // Arrange
-      doThrow(new RuntimeException("Redis operation failed"))
-          .when(valueOperations).increment(anyString(), eq(1));
+    @DisplayName("areEventsAllowed should return false when Redis denies the operation")
+    void areEventsAllowed_ShouldReturnFalse_WhenRedisDeniesOperation() {
+        // Arrange
+        int count = 5;
+        when(redisTemplate.execute(
+            any(),
+            anyList(),
+            any(),
+            any(),
+            any()
+        )).thenReturn(false);
 
-      // Act & Assert
-      boolean result = rateLimiterService.isAllow(ACCOUNT_ID);
+        // Act
+        boolean result = rateLimiterService.areEventsAllowed(ACCOUNT_ID, count);
 
-      // Assert
-      assertThat(result).isTrue(); // Fail-safe behavior
-      verify(valueOperations).increment(EXPECTED_KEY, 1);
+        // Assert
+        assertFalse(result);
+        verify(redisTemplate).execute(
+            any(),
+            eq(Collections.singletonList(EXPECTED_REDIS_KEY)),
+            eq(new String[]{String.valueOf(count), "100", "60"})
+        );
     }
 
     @Test
-    @DisplayName("Should handle null accountId")
-    void shouldHandleNullAccountId() {
-      // Act
-      boolean result = rateLimiterService.isAllow(null);
+    @DisplayName("areEventsAllowed should return true when Redis throws an exception (fail-safe behavior)")
+    void areEventsAllowed_ShouldReturnTrue_WhenRedisThrowsException() {
+        // Arrange
+        int count = 5;
+        when(redisTemplate.execute(
+            any(RedisScript.class),
+            anyList(),
+            any(String[].class)
+        )).thenThrow(new RuntimeException("Redis connection error"));
 
-      // Assert
-      assertThat(result).isTrue(); // Fail-safe behavior
-      verify(valueOperations).increment("rate-limit:null", 1L);
+        // Act
+        boolean result = rateLimiterService.areEventsAllowed(ACCOUNT_ID, count);
+
+        // Assert
+        assertTrue(result, "Should return true in fail-safe mode when Redis fails");
+        verify(redisTemplate).execute(
+            any(RedisScript.class),
+            eq(Collections.singletonList(EXPECTED_REDIS_KEY)),
+            eq(new String[]{String.valueOf(count), "100", "60"})
+        );
     }
-  }
-
-  @Nested
-  @DisplayName("Integration Tests")
-  class IntegrationTests {
 
     @Test
-    @DisplayName("Should correctly handle rate limiting flow")
-    void shouldHandleRateLimitingFlow() {
-      // Arrange
-      when(valueOperations.increment(anyString(), eq(1L)))
-          .thenReturn(1L, 2L, 3L, MAX_EVENTS + 1L);
+    @DisplayName("areEventsAllowed should use custom rate limit values from properties")
+    void areEventsAllowed_ShouldUseCustomRateLimitValues() {
+        // Arrange
+        int count = 5;
+        int customEventLimit = 200;
+        int customTimeMinutes = 2;
+        
+        when(rateLimitProperties.getEvent()).thenReturn(customEventLimit);
+        when(rateLimitProperties.getTime()).thenReturn(customTimeMinutes);
+        
+        when(redisTemplate.execute(
+            any(RedisScript.class),
+            anyList(),
+            any(String[].class)
+        )).thenReturn(true);
 
-      // Act
-      boolean firstRequest = rateLimiterService.isAllow(ACCOUNT_ID);
-      boolean secondRequest = rateLimiterService.isAllow(ACCOUNT_ID);
-      boolean thirdRequest = rateLimiterService.isAllow(ACCOUNT_ID);
-      boolean exceededRequest = rateLimiterService.isAllow(ACCOUNT_ID);
+        // Act
+        boolean result = rateLimiterService.areEventsAllowed(ACCOUNT_ID, count);
 
-      // Assert
-      assertThat(firstRequest).isTrue();
-      assertThat(secondRequest).isTrue();
-      assertThat(thirdRequest).isTrue();
-      assertThat(exceededRequest).isFalse();
-
-      verify(valueOperations, times(4)).increment(EXPECTED_KEY, 1L);
-      verify(redisTemplate).expire(eq(EXPECTED_KEY), eq(Duration.ofMinutes(TIME_WINDOW_MINUTES)));
+        // Assert
+        assertTrue(result);
+        verify(redisTemplate).execute(
+            any(RedisScript.class),
+            eq(Collections.singletonList(EXPECTED_REDIS_KEY)),
+            eq(new String[]{String.valueOf(count), String.valueOf(customEventLimit), String.valueOf(customTimeMinutes * 60)})
+        );
     }
-  }
-}
+} 

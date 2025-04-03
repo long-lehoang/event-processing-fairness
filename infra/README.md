@@ -1,6 +1,14 @@
-### Setup local environment with docker compose
-To install postgres, kafka, redis. Run following commands:
+### Local Environment Setup with Docker Compose
+
+To set up your local development environment with PostgreSQL, Kafka, and Redis, run the following command:
+
 ```shell
 docker-compose up -d
 ```
-Kafka is running on 9092, Redis in running on 6379, Postgres is running on 5432
+
+## Service Ports
+- Kafka: `localhost:9092`
+- Redis: `localhost:6379`
+- PostgreSQL: `localhost:5432`
+
+You can access these services using the default connection strings in your application or by connecting directly to these ports.

@@ -100,4 +100,26 @@ class WebhookRestClientTest {
     verify(requestBodyUriSpec).uri(WEBHOOK_URL);
     verify(requestBodySpec).body(payload);
   }
+
+  @Test
+  void sendWebhook_WhenAcceptedStatus_ShouldReturnTrue() {
+    // Arrange
+    BaseEventDTO payload = new BaseEventDTO();
+    ResponseEntity<String> response = new ResponseEntity<>(SUCCESS_RESPONSE, HttpStatus.ACCEPTED);
+
+    when(restClient.post()).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+    when(requestBodySpec.body(any(BaseEventDTO.class))).thenReturn(requestBodySpec);
+    when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.toEntity(String.class)).thenReturn(response);
+
+    // Act
+    boolean result = webhookClient.sendWebhook(WEBHOOK_URL, payload);
+
+    // Assert
+    assertTrue(result);
+    verify(restClient).post();
+    verify(requestBodyUriSpec).uri(WEBHOOK_URL);
+    verify(requestBodySpec).body(payload);
+  }
 }

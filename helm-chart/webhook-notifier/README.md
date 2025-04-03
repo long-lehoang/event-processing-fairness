@@ -1,6 +1,6 @@
-# Microservices Helm Chart
+# Event Processing Fairness System Helm Chart
 
-This README provides guidelines to install Kubernetes, Ingress Controller, Helm for deploying microservices.
+This README provides guidelines to install Kubernetes, Ingress Controller, and Helm for deploying the event processing fairness microservices.
 
 ## Prerequisites
 
@@ -57,14 +57,17 @@ Follow the official Helm documentation to install Helm: [Helm Installation](http
 brew install helm
 ```
 
-## Step 4: Deploy Helm Chart
+## Step 4: Deploy Kafka and Event Processing Components
 
-To deploy the microservices Helm chart, use the following commands:
+To deploy the Kafka and event processing fairness components, use the following commands:
 
 ```sh
+# Create Kafka namespace and deploy Kafka with Strimzi operator
 kubectl create namespace kafka
 kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
 kubectl apply -f https://strimzi.io/examples/latest/kafka/kraft/kafka-single-node.yaml -n kafka 
+
+# Deploy the webhook-notifier and fairness components
 cd helm-chart
 helm install webhook ./webhook-notifier -n kafka
 ```
@@ -72,7 +75,17 @@ helm install webhook ./webhook-notifier -n kafka
 Verify the deployment:
 
 ```sh
-kubectl get pods -l app=kafka
+kubectl get pods -n kafka
 ```
 
-You have now deployed the microservices using the Helm chart.
+## Components Overview
+
+The helm chart includes the following components:
+
+- **Kafka**: Message broker for event streaming
+- **Redis**: In-memory data store for caching and message queuing
+- **PostgreSQL**: Relational database for persistent storage
+- **Producer Service**: Generates and publishes events to Kafka
+- **Notifier Service**: Processes events and sends notifications
+
+You have now deployed the event processing fairness system using the Helm chart.
