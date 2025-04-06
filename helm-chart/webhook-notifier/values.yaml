@@ -30,7 +30,7 @@ notifier:
     # Redis Config
     REDIS_HOST: "redis"
     REDIS_PORT: 6379
-    LIMIT_EVENT_COUNT: 2000
+    LIMIT_EVENT_COUNT: 7500
     LIMIT_EVENT_DURATION: 1  # 1 minute
     # Resilience4j Circuit Breaker Config
     WEBHOOK_RETRY_MAX_ATTEMPTS: 5

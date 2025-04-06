@@ -11,7 +11,7 @@ def generate_api_request_bodies_csv(output_file="api_request_bodies.csv"):
         writer.writeheader()  # Write column headers
 
         # Generate 896 request bodies
-        for i in range(1, 10001):  # 1 to 897 inclusive
+        for i in range(1, 50001):  # 1 to 897 inclusive
             event_id = f"sce-{i}"
             event_type = "subscriber.created"
             # Random subscriber ID from 1 to 50
@@ -26,7 +26,7 @@ def generate_api_request_bodies_csv(output_file="api_request_bodies.csv"):
                 "account_id": account_id
             })
 
-    print(f"Generated 10000 API request bodies and saved to {output_file}")
+    print(f"Generated 50000 API request bodies and saved to {output_file}")
 
 # Run the function
 if __name__ == "__main__":

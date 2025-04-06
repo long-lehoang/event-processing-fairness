@@ -79,7 +79,7 @@ def generate_sql_batch_inserts(output_file="test_data.sql"):
         # 5. subscriber_created_event Table (896 records)
         f.write("-- Batch Insert into subscriber_created_event table\n")
         subscriber_events = []
-        for i in range(1, 10000):
+        for i in range(1, 50000):
             sub_id = f"sub-{random.randint(1, 50)}"
             wh_id = f"wh-{random.randint(1, 6)}"
             event_time = base_date + timedelta(days=random.randint(0, 450), hours=random.randint(0, 23))
