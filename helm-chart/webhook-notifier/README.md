@@ -11,7 +11,15 @@ This README provides guidelines to install Kubernetes, Ingress Controller, and H
 
 Follow the official Kubernetes documentation to set up a Kubernetes cluster: [Kubernetes Setup](https://kubernetes.io/docs/setup/)
 
-## Step 2: Install Ingress Controller
+## Step 2: Install Metrics Server
+
+Install a Metrics Server using kubectl:
+```shell
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+```
+
+## Step 3: Install Ingress Controller
 
 Install an NGINX Ingress Controller using kubectl:
 
@@ -26,7 +34,7 @@ kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx
 ```
 
 You have successfully installed Kubernetes, Ingress Controller, Helm, and ArgoCD. You can now proceed to deploy your microservices using Helm charts.
-## Alternative Step 2: Install Ingress Controller on Minikube
+## Alternative Step 3: Install Ingress Controller on Minikube
 
 If you are using Minikube, you can enable the Ingress addon instead of installing the NGINX Ingress Controller manually.
 
@@ -49,7 +57,7 @@ minikube tunnel
 ```
 
 
-## Step 3: Install Helm
+## Step 4: Install Helm
 
 Follow the official Helm documentation to install Helm: [Helm Installation](https://helm.sh/docs/intro/install/)
 
@@ -57,7 +65,7 @@ Follow the official Helm documentation to install Helm: [Helm Installation](http
 brew install helm
 ```
 
-## Step 4: Deploy Kafka and Event Processing Components
+## Step 5: Deploy Kafka and Event Processing Components
 
 To deploy the Kafka and event processing fairness components, use the following commands:
 
