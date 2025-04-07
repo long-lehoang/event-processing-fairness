@@ -2,13 +2,13 @@ global:
   namespace: "kafka"
 
 producer:
-  image: longbale1999/webhook-producer:1.0.1
+  image: longbale1999/webhook-producer:1.1.1
   replicaCount: 1
   port: 8084
 
 notifier:
   replicaCount: 2
-  image: longbale1999/webhook-notifier:1.1.3
+  image: longbale1999/webhook-notifier:1.2.0
   service:
     type: ClusterIP
     port: 8080
@@ -18,10 +18,10 @@ notifier:
     # Kafka Config
     BOOTSTRAP_SERVERS_CONFIG: "my-cluster-kafka-bootstrap:9092"
     WEBHOOK_EVENT_TOPIC: "webhook-events"
-    WEBHOOK_EVENT_TOPIC_PARTITIONS: 4
+    WEBHOOK_EVENT_TOPIC_PARTITIONS: 3
     WEBHOOK_EVENT_TOPIC_REPLICATION_FACTOR: 1
     WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC: "webhook-event-dead-letter-queue"
-    WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_PARTITIONS: 4
+    WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_PARTITIONS: 3
     WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_REPLICATION_FACTOR: 1
     # Database Config
     DB_HOST: "postgres"

@@ -9,7 +9,7 @@ spring:
     topic:
       webhook-event:
         name: ${WEBHOOK_EVENT_TOPIC:webhook-events}
-        partitions: ${WEBHOOK_EVENT_TOPIC_PARTITIONS:4}
+        partitions: ${WEBHOOK_EVENT_TOPIC_PARTITIONS:3}
         replication-factor: ${WEBHOOK_EVENT_TOPIC_REPLICATION_FACTOR:1}
       dead-letter-queue-topic:
         name: ${WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC:webhook-event-dead-letter-queue}

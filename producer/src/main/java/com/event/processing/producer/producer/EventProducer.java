@@ -16,6 +16,6 @@ public class EventProducer{
   private KafkaTemplate<String, WebhookEventDTO> kafkaTemplate;
 
   public void publishEvent(WebhookEventDTO event) {
-    kafkaTemplate.send(topic, event.getEventId(), event);
+    kafkaTemplate.send(topic, event.getAccountId(), event);
   }
 }

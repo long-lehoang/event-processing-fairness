@@ -119,10 +119,6 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
    * @param eventGroup List of consumer records for the event type
    */
   private void processEventGroup(String eventType, List<ConsumerRecord<String, WebhookEventDTO>> eventGroup) {
-    Set<String> eventIds = eventGroup.stream()
-        .map(record -> record.value().getEventId())
-        .collect(Collectors.toSet());
-
     // Group events by account ID for batch rate limit checking
     Map<String, List<ConsumerRecord<String, WebhookEventDTO>>> eventsByAccount = eventGroup.stream()
         .collect(Collectors.groupingBy(record -> record.value().getAccountId()));
@@ -233,7 +229,8 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
       Map<String, String> webhookUrlMap,
       Map<String, BaseEventDTO> payloadMap) {
 
-    String eventId = event.key();
+    log.debug("Receive event key: {}", event.key());
+    String eventId = event.value().getEventId();
     WebhookEventDTO eventPayload = event.value();
 
     if (eventPayload == null) {

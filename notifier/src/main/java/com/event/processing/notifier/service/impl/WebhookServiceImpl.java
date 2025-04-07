@@ -59,7 +59,7 @@ public class WebhookServiceImpl implements WebhookService {
   public void processWithRetry(String eventId, WebhookEventDTO eventPayload, String webhookUrl,
                                BaseEventDTO webhookPayload) {
     try {
-      log.info("Sending webhook for event: {}", eventId);
+      log.info("Sending webhook for event_id: {}, account_id: {}", eventId, eventPayload.getAccountId());
       boolean success = webhookClient.sendWebhook(webhookUrl, webhookPayload);
 
       if (!success) {
@@ -107,6 +107,6 @@ public class WebhookServiceImpl implements WebhookService {
                                   BaseEventDTO webhookPayload, Exception e) {
     log.error("Circuit breaker open. Moving event {} to DLQ.", eventId, e);
     meterRegistry.counter(CIRCUIT_BREAKER_OPEN_COUNT).increment();
-    deadLetterQueueProducer.publish(deadLetterQueueTopic, eventId, eventPayload);
+    deadLetterQueueProducer.publish(deadLetterQueueTopic, eventPayload.getAccountId(), eventPayload);
   }
 }

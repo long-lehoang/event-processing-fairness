@@ -50080,6 +50080,7 @@ INSERT INTO public.subscriber_created_event (id, event_name, event_time, subscri
 ('sce-49997', 'subscriber.created', '2024-11-08 17:00:00+00', 'sub-26', 'wh-6'),
 ('sce-49998', 'subscriber.created', '2024-05-04 08:00:00+00', 'sub-33', 'wh-3'),
 ('sce-49999', 'subscriber.created', '2025-03-18 13:00:00+00', 'sub-42', 'wh-6');
+('sce-50000', 'subscriber.created', '2025-03-18 14:00:00+00', 'sub-42', 'wh-6');
 
 -- Batch Insert into subscriber_segment table
 INSERT INTO public.subscriber_segment (id, created_at, created_by, segment_id, subscriber_id) VALUES
