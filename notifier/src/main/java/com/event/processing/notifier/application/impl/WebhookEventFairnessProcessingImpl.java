@@ -6,6 +6,7 @@ import com.event.processing.notifier.domain.dto.WebhookEventDTO;
 import com.event.processing.notifier.producer.EventProducer;
 import com.event.processing.notifier.service.DeduplicationService;
 import com.event.processing.notifier.service.WebhookService;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static com.event.processing.notifier.util.PromeTheusMetricContants.WEBHOOK_EXECUTION_COUNT;
 
 /**
  * Implementation of WebhookEventProcessing that provides fairness-aware event
@@ -34,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessing {
 
-  private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+  private final MeterRegistry meterRegistry;
 
   /**
    * Service for detecting and handling duplicate events.
@@ -78,6 +81,7 @@ public class WebhookEventFairnessProcessingImpl implements WebhookEventProcessin
       return;
 
     try {
+      meterRegistry.counter(WEBHOOK_EXECUTION_COUNT).increment();
       webhookService.processWithRetry(eventId, eventPayload, url, webhookPayload);
       deduplicationService.markProcessed(eventId);
       log.info("Successfully processed event: {}", eventId);

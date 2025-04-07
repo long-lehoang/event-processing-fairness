@@ -71,8 +71,6 @@ public class WebhookServiceImpl implements WebhookService {
       log.error("Error processing webhook for event {}: {}", eventId, e.getMessage(), e);
       meterRegistry.counter(WEBHOOK_FAILURE_COUNT).increment();
       throw e;
-    } finally {
-      meterRegistry.counter(WEBHOOK_EXECUTION_COUNT).increment();
     }
   }
 

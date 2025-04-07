@@ -5,6 +5,7 @@ import com.event.processing.notifier.domain.dto.WebhookEventDTO;
 import com.event.processing.notifier.producer.EventProducer;
 import com.event.processing.notifier.service.DeduplicationService;
 import com.event.processing.notifier.service.WebhookService;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,9 @@ class WebhookEventFairnessProcessingImplTest {
     @Mock
     private EventProducer eventProducer;
 
+    @Mock
+    private MeterRegistry meterRegistry;
+
     private WebhookEventFairnessProcessingImpl webhookEventProcessing;
 
     private static final String EVENT_ID = "test-event-id";
@@ -34,7 +38,7 @@ class WebhookEventFairnessProcessingImplTest {
 
     @BeforeEach
     void setUp() {
-        webhookEventProcessing = new WebhookEventFairnessProcessingImpl(deduplicationService, webhookService, eventProducer);
+        webhookEventProcessing = new WebhookEventFairnessProcessingImpl(meterRegistry, deduplicationService, webhookService, eventProducer);
         ReflectionTestUtils.setField(webhookEventProcessing, "webhookEventTopic", WEBHOOK_EVENT_TOPIC);
     }
 
