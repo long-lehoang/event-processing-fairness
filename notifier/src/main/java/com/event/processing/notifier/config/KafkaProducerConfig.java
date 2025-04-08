@@ -1,5 +1,6 @@
 package com.event.processing.notifier.config;
 
+import com.event.processing.notifier.domain.dto.DeadLetterQueueEventDTO;
 import com.event.processing.notifier.domain.dto.WebhookEventDTO;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -40,14 +41,12 @@ public class KafkaProducerConfig {
   private String bootstrapServers;
 
   /**
-   * Creates and configures the Kafka ProducerFactory.
-   * Sets up serializers and producer properties for sending WebhookEventDTO
-   * messages.
+   * Creates a producer factory for WebhookEventDTO messages.
    *
-   * @return Configured ProducerFactory instance
+   * @return Configured ProducerFactory instance for WebhookEventDTO
    */
   @Bean
-  public ProducerFactory<String, WebhookEventDTO> producerFactory() {
+  public ProducerFactory<String, WebhookEventDTO> webhookProducerFactory() {
     Map<String, Object> configProps = new HashMap<>();
     configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -57,13 +56,39 @@ public class KafkaProducerConfig {
   }
 
   /**
-   * Creates a KafkaTemplate for sending messages to Kafka topics.
-   * The template is thread-safe and can be used across multiple threads.
+   * Creates a producer factory for DeadLetterQueueEventDTO messages.
    *
-   * @return Configured KafkaTemplate instance
+   * @return Configured ProducerFactory instance for DeadLetterQueueEventDTO
    */
   @Bean
-  public KafkaTemplate<String, WebhookEventDTO> kafkaTemplate() {
-    return new KafkaTemplate<>(producerFactory());
+  public ProducerFactory<String, DeadLetterQueueEventDTO> dlqProducerFactory() {
+    Map<String, Object> configProps = new HashMap<>();
+    configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+    configProps.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, KafkaPartitioner.class);
+    return new DefaultKafkaProducerFactory<>(configProps);
+  }
+
+  /**
+   * Creates a KafkaTemplate for sending WebhookEventDTO messages to Kafka topics.
+   * The template is thread-safe and can be used across multiple threads.
+   *
+   * @return Configured KafkaTemplate instance for WebhookEventDTO
+   */
+  @Bean("webhookKafkaTemplate")
+  public KafkaTemplate<String, WebhookEventDTO> webhookKafkaTemplate() {
+    return new KafkaTemplate<>(webhookProducerFactory());
+  }
+
+  /**
+   * Creates a KafkaTemplate for sending DeadLetterQueueEventDTO messages to Kafka topics.
+   * The template is thread-safe and can be used across multiple threads.
+   *
+   * @return Configured KafkaTemplate instance for DeadLetterQueueEventDTO
+   */
+  @Bean("dlqKafkaTemplate")
+  public KafkaTemplate<String, DeadLetterQueueEventDTO> dlqKafkaTemplate() {
+    return new KafkaTemplate<>(dlqProducerFactory());
   }
 }

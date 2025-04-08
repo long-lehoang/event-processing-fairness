@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: dlq-service
+    
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dlq_events
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS}
+    topic:
+      dead-letter-queue: webhook-event-dead-letter-queue
+      webhook-events: webhook-events
+    consumer:
+      group-id: dlq-service-group
+      auto-offset-reset: earliest
+      
+dlq:
+  retry:
+    max-attempts: 5
+    initial-delay: 300  # 5 minutes
+    multiplier: 2.0
+    check-interval: 60000  # 1 minute
+    
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    enable:
+      all: true
