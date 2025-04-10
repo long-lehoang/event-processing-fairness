@@ -1,28 +1,58 @@
+server:
+  port: 8080
+  address: 0.0.0.0
+
 spring:
   application:
     name: dlq-service
-    
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/dlq_events
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:dlq_events}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
   kafka:
-    bootstrap-servers: ${KAFKA_SERVERS}
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
     topic:
-      dead-letter-queue: webhook-event-dead-letter-queue
-      webhook-events: webhook-events
+      dead-letter-queue: ${WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC:webhook-event-dead-letter-queue}
+      webhook-events: ${WEBHOOK_EVENT_TOPIC:webhook-events}
     consumer:
-      group-id: dlq-service-group
+      group-id: ${CONSUMER_GROUP_ID:dlq-service-group}
       auto-offset-reset: earliest
-      
+      enable-auto-commit: false
+      max-poll-records: ${KAFKA_MAX_POLL_RECORDS:100}
+      poll-timeout: ${KAFKA_POLL_TIMEOUT:5000}
+    listener:
+      concurrency: ${KAFKA_LISTENER_CONCURRENCY:3}
+      type: batch
+
 dlq:
   retry:
-    max-attempts: 5
-    initial-delay: 300  # 5 minutes
-    multiplier: 2.0
-    check-interval: 60000  # 1 minute
-    
+    max-attempts: ${DLQ_RETRY_MAX_ATTEMPTS:5}
+    initial-delay: ${DLQ_RETRY_INITIAL_DELAY:300}  # 5 minutes
+    multiplier: ${DLQ_RETRY_MULTIPLIER:2.0}
+    check-interval: ${DLQ_RETRY_CHECK_INTERVAL:60000}  # 1 minute
+    batch-size: ${DLQ_RETRY_BATCH_SIZE:100}  # Number of events to process in each batch
+    concurrency: ${DLQ_RETRY_CONCURRENCY:4}  # Number of threads to use for processing
+  batch:
+    size: ${DLQ_BATCH_SIZE:100}  # Number of entities to include in each database batch operation
+
+# Thread pool configuration
+thread-pool:
+  retry:
+    core-size: ${THREAD_POOL_RETRY_CORE_SIZE:4}
+    max-size: ${THREAD_POOL_RETRY_MAX_SIZE:10}
+    queue-capacity: ${THREAD_POOL_RETRY_QUEUE_CAPACITY:100}
+    keep-alive-seconds: ${THREAD_POOL_RETRY_KEEP_ALIVE_SECONDS:60}
+    thread-name-prefix: ${THREAD_POOL_RETRY_THREAD_NAME_PREFIX:retry-task-}
+
 management:
   endpoints:
     web:
@@ -33,3 +63,6 @@ management:
       application: ${spring.application.name}
     enable:
       all: true
+    export:
+      prometheus:
+        enabled: true
