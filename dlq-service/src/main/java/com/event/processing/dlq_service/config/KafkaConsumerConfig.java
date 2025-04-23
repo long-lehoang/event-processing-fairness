@@ -52,7 +52,7 @@ public class KafkaConsumerConfig {
    * Maximum number of records to fetch in a single poll.
    * Defaults to 20 records if not specified.
    */
-  @Value("${spring.kafka.consumer.max-poll-records:20}")
+  @Value("${spring.kafka.consumer.max-poll-records:100}")
   private int maxPollRecords;
 
   /**
@@ -79,23 +79,14 @@ public class KafkaConsumerConfig {
     props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, maxPollRecords);
     props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, "org.apache.kafka.clients.consumer.RoundRobinAssignor");
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-    props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000); // 5 minutes
-    props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 3000); // 3 seconds
-    props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 30000); // 30 seconds
     props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
     props.put(JsonDeserializer.REMOVE_TYPE_INFO_HEADERS, true);
-    props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, DeadLetterQueueEventDTO.class.getName());
 
     log.info("Creating Kafka Consumer Factory with Group ID: {}, Max Poll Records: {}, Enable Auto Commit: {}",
         groupId, maxPollRecords, enableAutoCommit);
 
-    // Create JsonDeserializer with proper type information
-    JsonDeserializer<DeadLetterQueueEventDTO> jsonDeserializer = new JsonDeserializer<>(DeadLetterQueueEventDTO.class);
-    jsonDeserializer.setRemoveTypeHeaders(false);
-    jsonDeserializer.addTrustedPackages("*");
-    jsonDeserializer.setUseTypeMapperForKey(true);
-
-    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), jsonDeserializer);
+    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(),
+        new JsonDeserializer<>(DeadLetterQueueEventDTO.class, false));
   }
 
   /**

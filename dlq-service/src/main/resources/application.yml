@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8088
   address: 0.0.0.0
 
 spring:
@@ -57,12 +57,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,metrics,prometheus
+        include: "*"
   metrics:
-    tags:
-      application: ${spring.application.name}
-    enable:
-      all: true
     export:
       prometheus:
         enabled: true

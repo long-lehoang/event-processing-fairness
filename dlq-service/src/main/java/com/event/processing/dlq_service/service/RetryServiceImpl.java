@@ -7,7 +7,6 @@ import com.event.processing.dlq_service.domain.entity.DeadLetterEvent;
 import com.event.processing.dlq_service.domain.mapper.DeadLetterQueueMapper;
 import com.event.processing.dlq_service.producer.EventProducer;
 import com.event.processing.dlq_service.repository.DeadLetterEventRepository;
-import com.event.processing.dlq_service.util.PaginationUtils;
 import com.event.processing.dlq_service.util.RetryUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +26,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of the RetryService interface.
@@ -67,123 +64,38 @@ public class RetryServiceImpl implements RetryService {
   private int defaultConcurrencyLevel;
 
   /**
-   * {@inheritDoc}
+   * Scheduled method to process retries.
+   *
    */
-  @Override
-  @Async("retryTaskExecutor")
-  public CompletableFuture<Void> retryEvent(DeadLetterEvent event) {
-    try {
-      // Convert the stored event to a WebhookEventDTO
-      WebhookEventDTO webhookEvent = mapper.toWebhookEventDTO(event);
-
-      // Publish the event to the webhook events topic
-      webhookEventProducer.publishEvent(webhookEventsTopic, webhookEvent);
-
-      // Update the event status
-      event.setStatus(EventStatusConstants.RETRYING);
-      event.setLastRetryAt(Instant.now());
-      event.setNextRetryAt(RetryUtils.calculateNextRetryTime(event.getRetryCount(), initialDelaySeconds, multiplier));
-      updateEventsInTransaction(Collections.singletonList(event));
-
-      log.info("Retried event: {}, retry count: {}", event.getEventId(), event.getRetryCount());
-      meterRegistry.counter(MetricConstants.DLQ_EVENTS_RETRIED).increment();
-
-      return CompletableFuture.completedFuture(null);
-    } catch (Exception e) {
-      log.error("Failed to retry event: {}", event.getEventId(), e);
-      meterRegistry.counter(MetricConstants.DLQ_EVENTS_RETRY_FAILED).increment();
-
-      // Update the event with the failure
-      event.setRetryCount(event.getRetryCount() + 1);
-      event.setLastErrorMessage(e.getMessage());
-      event.setLastRetryAt(Instant.now());
-      event.setNextRetryAt(RetryUtils.calculateNextRetryTime(event.getRetryCount(), initialDelaySeconds, multiplier));
-
-      if (event.getRetryCount() >= maxRetryAttempts) {
-        event.setStatus(EventStatusConstants.FAILED);
-        meterRegistry.counter(MetricConstants.DLQ_EVENTS_MAX_RETRIES_EXCEEDED).increment();
-        log.error("Max retries exceeded for event: {}", event.getEventId());
-      }
-
-      updateEventsInTransaction(Collections.singletonList(event));
-
-      return CompletableFuture.failedFuture(e);
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
   @Scheduled(fixedDelayString = "${dlq.retry.check-interval:60000}")
-  @Transactional(readOnly = true)
   public void processRetries() {
-    processRetriesConcurrently("PENDING", Instant.now(), defaultConcurrencyLevel);
+    processRetriesConcurrently("PENDING", Instant.now());
   }
 
   /**
    * {@inheritDoc}
    */
   @Override
-  @Transactional(readOnly = true)
   public List<String> processRetries(String status, Instant now) {
     log.info("Starting to process retries with status: {} and time before: {}", status, now);
 
     // Process events in batches and collect results
-    List<String> processedEventIds = processEventsInBatches(status, now);
+    List<String> processedEventIds = processRetriesConcurrently(status, Instant.now());
 
     log.info("Completed processing {} events for retry", processedEventIds.size());
     return processedEventIds;
   }
 
   /**
-   * Processes events in batches and collects the results.
+   * Processes retries concurrently.
    *
-   * @param status The status of events to process
-   * @param now    The current time
-   * @return A list of processed event IDs
+   * @param status
+   * @param now
+   * @return
    */
-  private List<String> processEventsInBatches(String status, Instant now) {
-    return PaginationUtils.processPaginated(
-        batchSize,
-        pageable -> repository.findByStatusAndNextRetryAtBeforePaged(status, now, pageable),
-        this::processAndReturnEventId
-    );
-  }
-
-  /**
-   * Processes a single event and returns its ID if successful.
-   *
-   * @param event The event to process
-   * @return The event ID if successful, null otherwise
-   */
-  private String processAndReturnEventId(DeadLetterEvent event) {
-    try {
-      retryEvent(event).join(); // Wait for completion
-      return event.getEventId();
-    } catch (Exception e) {
-      log.error("Error processing retry for event: {}", event.getEventId(), e);
-      return null;
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  @Transactional(readOnly = true)
-  public List<String> processRetriesConcurrently(String status, Instant now, int concurrencyLevel) {
-    return processRetriesConcurrently(status, now, concurrencyLevel, this.batchSize);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  @Transactional(readOnly = true)
-  public List<String> processRetriesConcurrently(String status, Instant now, int concurrencyLevel, int customBatchSize) {
+  private List<String> processRetriesConcurrently(String status, Instant now) {
     log.info("Starting to process retries concurrently with status: {}, time before: {}, concurrency level: {}",
-        status, now, concurrencyLevel);
+        status, now, defaultConcurrencyLevel);
 
     // Use a thread-safe collection for futures
     List<CompletableFuture<String>> futures = Collections.synchronizedList(new ArrayList<>());
@@ -224,7 +136,7 @@ public class RetryServiceImpl implements RetryService {
 
     while (hasMorePages) {
       Pageable pageable = PageRequest.of(pageNumber, batchSize);
-      Page<DeadLetterEvent> eventsPage = repository.findByStatusAndNextRetryAtBeforePaged(status, now, pageable);
+      Page<DeadLetterEvent> eventsPage = repository.findByStatusAndNextRetryAtBefore(status, now, pageable);
 
       List<DeadLetterEvent> events = eventsPage.getContent();
       if (events.isEmpty()) {
@@ -239,12 +151,10 @@ public class RetryServiceImpl implements RetryService {
 
       // When the batch is complete, add individual results to the futures list
       batchFuture.thenAccept(eventIds -> {
-        synchronized (futuresLock) {
-          for (String eventId : eventIds) {
-            if (eventId != null) {
-              CompletableFuture<String> future = CompletableFuture.completedFuture(eventId);
-              futures.add(future);
-            }
+        for (String eventId : eventIds) {
+          if (eventId != null) {
+            CompletableFuture<String> future = CompletableFuture.completedFuture(eventId);
+            futures.add(future);
           }
         }
       });
@@ -308,13 +218,12 @@ public class RetryServiceImpl implements RetryService {
    * Processes a single event for retry.
    * This method handles the publishing to Kafka and updating the event status.
    *
-   * @param event The event to process
+   * @param event              The event to process
    * @param successfulEventIds The list to add successful event IDs to
-   * @param eventsToUpdate The list to add events that need to be updated to
-   * @throws Exception If there is an error processing the event
+   * @param eventsToUpdate     The list to add events that need to be updated to
    */
   private void processEventForRetry(DeadLetterEvent event, List<String> successfulEventIds,
-                                   List<DeadLetterEvent> eventsToUpdate) throws Exception {
+                                    List<DeadLetterEvent> eventsToUpdate) {
     // Convert the stored event to a WebhookEventDTO
     WebhookEventDTO webhookEvent = mapper.toWebhookEventDTO(event);
 
@@ -322,9 +231,9 @@ public class RetryServiceImpl implements RetryService {
     webhookEventProducer.publishEvent(webhookEventsTopic, webhookEvent);
 
     // Update the event status
-    event.setStatus(EventStatusConstants.RETRYING);
+    event.setStatus(EventStatusConstants.PROCESSED);
+    event.setRetryCount(event.getRetryCount() + 1);
     event.setLastRetryAt(Instant.now());
-    event.setNextRetryAt(RetryUtils.calculateNextRetryTime(event.getRetryCount(), initialDelaySeconds, multiplier));
 
     // Add to the list of events to update
     eventsToUpdate.add(event);
@@ -337,9 +246,9 @@ public class RetryServiceImpl implements RetryService {
    * Handles a failure when retrying an event.
    * This method updates the event status and adds it to the list of events to update.
    *
-   * @param event The event that failed to retry
+   * @param event          The event that failed to retry
    * @param eventsToUpdate The list to add the event to for updating
-   * @param e The exception that occurred
+   * @param e              The exception that occurred
    */
   private void handleEventRetryFailure(DeadLetterEvent event, List<DeadLetterEvent> eventsToUpdate, Exception e) {
     log.error("Failed to publish event: {}", event.getEventId(), e);
@@ -367,6 +276,7 @@ public class RetryServiceImpl implements RetryService {
    *
    * @param events The events to update
    */
+  @Transactional
   public void updateEventsInTransaction(List<DeadLetterEvent> events) {
     repository.saveAll(events);
   }

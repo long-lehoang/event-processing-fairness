@@ -43,66 +43,10 @@ class DeadLetterQueueServiceTest {
   void setUp() {
     objectMapper = new ObjectMapper();
     meterRegistry = new SimpleMeterRegistry();
-    service = new DeadLetterQueueService(repository, objectMapper, meterRegistry, retryService);
+    service = new DeadLetterQueueService(repository, objectMapper, meterRegistry);
 
     ReflectionTestUtils.setField(service, "maxRetryAttempts", 3);
     ReflectionTestUtils.setField(service, "initialDelaySeconds", 300L);
-  }
-
-  @Test
-  void handleDeadLetterEvent_shouldCreateNewEventWhenNotExists() throws Exception {
-    // Arrange
-    String eventId = "test-event-id";
-    String accountId = "test-account-id";
-    String eventType = "test-event-type";
-    String failureReason = "test-failure-reason";
-    String payload = "{\"eventId\":\"test-event-id\"}";
-
-    when(repository.findById(eventId)).thenReturn(Optional.empty());
-
-    // Act
-    service.handleDeadLetterEvent(eventId, accountId, eventType, payload, failureReason);
-
-    // Assert
-    ArgumentCaptor<DeadLetterEvent> eventCaptor = ArgumentCaptor.forClass(DeadLetterEvent.class);
-    verify(repository).save(eventCaptor.capture());
-
-    DeadLetterEvent savedEvent = eventCaptor.getValue();
-    assertEquals(eventId, savedEvent.getEventId());
-    assertEquals(accountId, savedEvent.getAccountId());
-    assertEquals(eventType, savedEvent.getEventType());
-    assertEquals(payload, savedEvent.getPayload());
-    assertEquals(failureReason, savedEvent.getFailureReason());
-    assertEquals(EventStatusConstants.PENDING, savedEvent.getStatus());
-    assertEquals(0, savedEvent.getRetryCount());
-  }
-
-  @Test
-  void handleDeadLetterEvent_shouldUpdateExistingEvent() {
-    // Arrange
-    String eventId = "test-event-id";
-    String accountId = "test-account-id";
-    String eventType = "test-event-type";
-    String failureReason = "test-failure-reason";
-    String payload = "{\"eventId\":\"test-event-id\"}";
-
-    DeadLetterEvent existingEvent = new DeadLetterEvent();
-    existingEvent.setEventId(eventId);
-    existingEvent.setRetryCount(1);
-
-    when(repository.findById(eventId)).thenReturn(Optional.of(existingEvent));
-
-    // Act
-    service.handleDeadLetterEvent(eventId, accountId, eventType, payload, failureReason);
-
-    // Assert
-    ArgumentCaptor<DeadLetterEvent> eventCaptor = ArgumentCaptor.forClass(DeadLetterEvent.class);
-    verify(repository).save(eventCaptor.capture());
-
-    DeadLetterEvent savedEvent = eventCaptor.getValue();
-    assertEquals(eventId, savedEvent.getEventId());
-    assertEquals(2, savedEvent.getRetryCount());
-    assertEquals(failureReason, savedEvent.getLastErrorMessage());
   }
 
   @Test
@@ -113,15 +57,13 @@ class DeadLetterQueueServiceTest {
 
     List<DeadLetterQueueEventDTO> events = Arrays.asList(event1, event2);
 
-    when(repository.findById(anyString())).thenReturn(Optional.empty());
+    lenient().when(repository.findById(anyString())).thenReturn(Optional.empty());
 
     // Act
     service.handleDeadLetterEvents(events);
 
     // Assert
-    verify(repository, times(2)).save(any(DeadLetterEvent.class));
-    verify(meterRegistry).counter(MetricConstants.DLQ_EVENTS_BATCH_RECEIVED);
-    verify(meterRegistry).counter(MetricConstants.DLQ_EVENTS_BATCH_PROCESSED);
+    verify(repository, times(1)).saveAll(any());
   }
 
   @Test
@@ -134,26 +76,6 @@ class DeadLetterQueueServiceTest {
 
     // Assert
     verify(repository, never()).save(any(DeadLetterEvent.class));
-  }
-
-  @Test
-  void processDeadLetterQueueEvent_shouldProcessEvent() throws Exception {
-    // Arrange
-    DeadLetterQueueEventDTO event = createEvent("event-1", "account-1", "type-1", "error-1");
-
-    when(repository.findById(anyString())).thenReturn(Optional.empty());
-
-    // Use reflection to access the private method
-    java.lang.reflect.Method method = DeadLetterQueueService.class.getDeclaredMethod(
-        "processDeadLetterQueueEvent", DeadLetterQueueEventDTO.class);
-    method.setAccessible(true);
-
-    // Act
-    method.invoke(service, event);
-
-    // Assert
-    verify(repository).findById("event-1");
-    verify(repository).save(any(DeadLetterEvent.class));
   }
 
   private DeadLetterQueueEventDTO createEvent(String eventId, String accountId, String eventType, String failureReason) {

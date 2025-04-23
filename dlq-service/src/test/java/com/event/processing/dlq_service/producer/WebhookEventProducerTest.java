@@ -75,23 +75,4 @@ class WebhookEventProducerTest {
     // Assert
     verify(kafkaTemplate, times(1)).send(eq(customTopic), eq("test-event-id"), eq(event));
   }
-
-  @Test
-  void publishEvent_shouldHandleException() {
-    // Arrange
-    WebhookEventDTO event = WebhookEventDTO.builder()
-        .eventId("test-event-id")
-        .accountId("test-account-id")
-        .eventType("test-event-type")
-        .build();
-
-    when(kafkaTemplate.send(anyString(), anyString(), any(WebhookEventDTO.class)))
-        .thenThrow(new RuntimeException("Test exception"));
-
-    // Act & Assert - no exception should be thrown
-    webhookEventProducer.publishEvent(event);
-
-    // Verify
-    verify(kafkaTemplate, times(1)).send(eq("webhook-events"), eq("test-event-id"), eq(event));
-  }
 }

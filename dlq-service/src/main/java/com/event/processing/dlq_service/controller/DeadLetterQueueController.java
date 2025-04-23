@@ -21,13 +21,11 @@ public class DeadLetterQueueController {
 
   @GetMapping("/events")
   public Page<DeadLetterEvent> getEvents(Pageable pageable) {
-    meterRegistry.counter("dlq.api.events.listed").increment();
     return repository.findAll(pageable);
   }
 
   @GetMapping("/events/{eventId}")
   public DeadLetterEvent getEvent(@PathVariable String eventId) {
-    meterRegistry.counter("dlq.api.events.retrieved").increment();
     return repository.findById(eventId)
         .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
   }

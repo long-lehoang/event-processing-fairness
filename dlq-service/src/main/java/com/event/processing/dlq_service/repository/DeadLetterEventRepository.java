@@ -43,7 +43,7 @@ public interface DeadLetterEventRepository extends JpaRepository<DeadLetterEvent
    * @param pageable Pagination information
    * @return A page of matching events
    */
-  Page<DeadLetterEvent> findByStatusAndNextRetryAtBeforePaged(String status, Instant time, Pageable pageable);
+  Page<DeadLetterEvent> findByStatusAndNextRetryAtBefore(String status, Instant time, Pageable pageable);
 
   /**
    * Finds events that are ready for retry based on status, retry count, and next retry time.

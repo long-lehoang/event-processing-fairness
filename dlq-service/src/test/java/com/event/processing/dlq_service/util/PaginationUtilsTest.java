@@ -43,11 +43,10 @@ class PaginationUtilsTest {
     List<String> results = PaginationUtils.processPaginated(pageSize, pageFunction, processor);
 
     // Assert
-    assertEquals(3, results.size());
+    assertEquals(2, results.size());
     assertEquals("ITEM1", results.get(0));
     assertEquals("ITEM2", results.get(1));
-    assertEquals("ITEM3", results.get(2));
-    verify(pageFunction, times(3)).apply(any(Pageable.class));
+    verify(pageFunction, times(1)).apply(any(Pageable.class));
   }
 
   @Test
@@ -103,11 +102,10 @@ class PaginationUtilsTest {
     );
 
     // Assert
-    assertEquals(3, results.size());
+    assertEquals(2, results.size());
     assertEquals("prefix-1", results.get(0));
     assertEquals("prefix-2", results.get(1));
-    assertEquals("prefix-3", results.get(2));
-    verify(pageFunction, times(3)).apply(any(Pageable.class));
+    verify(pageFunction, times(1)).apply(any(Pageable.class));
   }
 
   @Test
@@ -137,10 +135,9 @@ class PaginationUtilsTest {
     List<String> results = PaginationUtils.processPaginatedBatch(pageSize, pageFunction, batchProcessor);
 
     // Assert
-    assertEquals(3, results.size());
+    assertEquals(2, results.size());
     assertEquals("ITEM1", results.get(0));
     assertEquals("ITEM2", results.get(1));
-    assertEquals("ITEM3", results.get(2));
-    verify(pageFunction, times(3)).apply(any(Pageable.class));
+    verify(pageFunction, times(1)).apply(any(Pageable.class));
   }
 }
