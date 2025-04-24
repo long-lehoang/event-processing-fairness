@@ -47,6 +47,15 @@ notifier:
     KAFKA_CONSUMER_MAX_SIZE: 50
     KAFKA_CONSUMER_QUEUE_CAPACITY: 100
 
+dlq:
+  replicaCount: 1
+  image: longbale1999/webhook-dlq-service:1.0.0
+  service:
+    type: ClusterIP
+    port: 8088
+  ingress:
+    enabled: false
+
 postgres:
   image: "postgres:latest"
   storage: 10Gi
@@ -74,3 +83,4 @@ grafana:
 ingress:
   host:
     producer: "producer.test"
+    dlq: "dlq.test"

@@ -1,19 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: producer-ingress
+  name: dlq-ingress
   namespace: {{ .Values.global.namespace }}
   annotations:
     kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-    - host: {{ .Values.ingress.host.producer }}
+    - host: {{ .Values.ingress.host.dlq }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: producer
+                name: dlq
                 port:
-                  number: {{ .Values.producer.port }}
+                  number: {{ .Values.dlq.port }}
