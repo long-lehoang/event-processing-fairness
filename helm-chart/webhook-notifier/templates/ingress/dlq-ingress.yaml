@@ -16,4 +16,4 @@ spec:
               service:
                 name: dlq
                 port:
-                  number: {{ .Values.dlq.port }}
+                  number: {{ .Values.dlq.service.port }}

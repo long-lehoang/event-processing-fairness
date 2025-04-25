@@ -50,6 +50,8 @@ spec:
             # Database Config
             - name: DB_HOST
               value: {{ .Values.dlq.env.DB_HOST }}
+            - name: DB_NAME
+              value: {{ .Values.dlq.env.DB_NAME }}
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
@@ -60,36 +62,6 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_PASSWORD
-
-            # Redis Config
-            - name: REDIS_HOST
-              value: {{ .Values.dlq.env.REDIS_HOST }}
-            - name: REDIS_PORT
-              value: "{{ .Values.dlq.env.REDIS_PORT }}"
-            - name: LIMIT_EVENT_COUNT
-              value: "{{ .Values.dlq.env.LIMIT_EVENT_COUNT }}"
-            - name: LIMIT_EVENT_DURATION
-              value: "{{ .Values.dlq.env.LIMIT_EVENT_DURATION }}"
-
-            # Resilience4j Circuit Breaker Config
-            - name: WEBHOOK_RETRY_MAX_ATTEMPTS
-              value: "{{ .Values.dlq.env.WEBHOOK_RETRY_MAX_ATTEMPTS }}"
-            - name: WEBHOOK_RETRY_WAIT_DURATION
-              value: {{ .Values.dlq.env.WEBHOOK_RETRY_WAIT_DURATION }}
-            - name: WEBHOOK_CIRCUIT_FAILURE_THRESHOLD
-              value: "{{ .Values.dlq.env.WEBHOOK_CIRCUIT_FAILURE_THRESHOLD }}"
-            - name: WEBHOOK_CIRCUIT_SLOW_RATE_THRESHOLD
-              value: "{{ .Values.dlq.env.WEBHOOK_CIRCUIT_SLOW_RATE_THRESHOLD }}"
-            - name: WEBHOOK_CIRCUIT_SLOW_DURATION_THRESHOLD
-              value: {{ .Values.dlq.env.WEBHOOK_CIRCUIT_SLOW_DURATION_THRESHOLD }}
-            - name: WEBHOOK_CIRCUIT_WAIT_OPEN_STATE
-              value: {{ .Values.dlq.env.WEBHOOK_CIRCUIT_WAIT_OPEN_STATE }}
-            - name: WEBHOOK_CIRCUIT_PERMITTED_CALLS_HALF_OPEN
-              value: "{{ .Values.dlq.env.WEBHOOK_CIRCUIT_PERMITTED_CALLS_HALF_OPEN }}"
-            - name: WEBHOOK_CIRCUIT_MIN_CALLS
-              value: "{{ .Values.dlq.env.WEBHOOK_CIRCUIT_MIN_CALLS }}"
-            - name: WEBHOOK_CIRCUIT_EVENT_BUFFER_SIZE
-              value: "{{ .Values.dlq.env.WEBHOOK_CIRCUIT_EVENT_BUFFER_SIZE }}"
 
             # Thread Pool Config
             - name: KAFKA_CONSUMER_CORE_SIZE

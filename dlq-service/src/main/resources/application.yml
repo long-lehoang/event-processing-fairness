@@ -11,7 +11,16 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
-
+  hikari:
+    minimum-idle: 5
+    maximum-pool-size: 20
+    idle-timeout: 300000        # 5 minutes
+    pool-name: DLQHikariPool
+    max-lifetime: 1200000       # 20 minutes
+    connection-timeout: 20000   # 20 seconds
+    auto-commit: true
+    connection-test-query: SELECT 1
+  type: com.zaxxer.hikari.HikariDataSource
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
@@ -19,7 +28,7 @@ spring:
     show-sql: false
 
   kafka:
-    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    bootstrap-servers: ${BOOTSTRAP_SERVERS_CONFIG:localhost:9092}
     topic:
       dead-letter-queue: ${WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC:webhook-event-dead-letter-queue}
       webhook-events: ${WEBHOOK_EVENT_TOPIC:webhook-events}
