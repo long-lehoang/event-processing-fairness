@@ -1,0 +1,73 @@
+server:
+  port: 8088
+  address: 0.0.0.0
+
+spring:
+  application:
+    name: dlq-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:dlq_events}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  hikari:
+    minimum-idle: 5
+    maximum-pool-size: 20
+    idle-timeout: 300000        # 5 minutes
+    pool-name: DLQHikariPool
+    max-lifetime: 1200000       # 20 minutes
+    connection-timeout: 20000   # 20 seconds
+    auto-commit: true
+    connection-test-query: SELECT 1
+  type: com.zaxxer.hikari.HikariDataSource
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: ${BOOTSTRAP_SERVERS_CONFIG:localhost:9092}
+    topic:
+      dead-letter-queue: ${WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC:webhook-event-dead-letter-queue}
+      webhook-events: ${WEBHOOK_EVENT_TOPIC:webhook-events}
+    consumer:
+      group-id: ${CONSUMER_GROUP_ID:dlq-service-group}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      max-poll-records: ${KAFKA_MAX_POLL_RECORDS:100}
+      poll-timeout: ${KAFKA_POLL_TIMEOUT:5000}
+    listener:
+      concurrency: ${KAFKA_LISTENER_CONCURRENCY:3}
+      type: batch
+
+dlq:
+  retry:
+    max-attempts: ${DLQ_RETRY_MAX_ATTEMPTS:5}
+    initial-delay: ${DLQ_RETRY_INITIAL_DELAY:300}  # 5 minutes
+    multiplier: ${DLQ_RETRY_MULTIPLIER:2.0}
+    check-interval: ${DLQ_RETRY_CHECK_INTERVAL:60000}  # 1 minute
+    batch-size: ${DLQ_RETRY_BATCH_SIZE:100}  # Number of events to process in each batch
+    concurrency: ${DLQ_RETRY_CONCURRENCY:4}  # Number of threads to use for processing
+  batch:
+    size: ${DLQ_BATCH_SIZE:100}  # Number of entities to include in each database batch operation
+
+# Thread pool configuration
+thread-pool:
+  retry:
+    core-size: ${THREAD_POOL_RETRY_CORE_SIZE:4}
+    max-size: ${THREAD_POOL_RETRY_MAX_SIZE:10}
+    queue-capacity: ${THREAD_POOL_RETRY_QUEUE_CAPACITY:100}
+    keep-alive-seconds: ${THREAD_POOL_RETRY_KEEP_ALIVE_SECONDS:60}
+    thread-name-prefix: ${THREAD_POOL_RETRY_THREAD_NAME_PREFIX:retry-task-}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    export:
+      prometheus:
+        enabled: true

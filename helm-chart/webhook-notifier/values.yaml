@@ -7,13 +7,11 @@ producer:
   port: 8084
 
 notifier:
-  replicaCount: 2
-  image: longbale1999/webhook-notifier:1.2.1
+  replicaCount: 1
+  image: longbale1999/webhook-notifier:1.3.0
   service:
     type: ClusterIP
     port: 8080
-  ingress:
-    enabled: false
   env:
     # Kafka Config
     BOOTSTRAP_SERVERS_CONFIG: "my-cluster-kafka-bootstrap:9092"
@@ -47,6 +45,31 @@ notifier:
     KAFKA_CONSUMER_MAX_SIZE: 50
     KAFKA_CONSUMER_QUEUE_CAPACITY: 100
 
+dlq:
+  replicaCount: 1
+  image: longbale1999/webhook-dlq-service:1.0.2
+  service:
+    type: ClusterIP
+    port: 8088
+  env:
+    # Kafka Config
+    BOOTSTRAP_SERVERS_CONFIG: "my-cluster-kafka-bootstrap:9092"
+    WEBHOOK_EVENT_TOPIC: "webhook-events"
+    WEBHOOK_EVENT_TOPIC_PARTITIONS: 3
+    WEBHOOK_EVENT_TOPIC_REPLICATION_FACTOR: 1
+    WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC: "webhook-event-dead-letter-queue"
+    WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_PARTITIONS: 3
+    WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_REPLICATION_FACTOR: 1
+    # Database Config
+    DB_HOST: "postgres"
+    DB_NAME: "webhook"
+    DB_USER: "postgres"
+    DB_PASSWORD: "postgres"
+    # Thread Pool Config
+    KAFKA_CONSUMER_CORE_SIZE: 10
+    KAFKA_CONSUMER_MAX_SIZE: 50
+    KAFKA_CONSUMER_QUEUE_CAPACITY: 100
+
 postgres:
   image: "postgres:latest"
   storage: 10Gi
@@ -74,3 +97,4 @@ grafana:
 ingress:
   host:
     producer: "producer.test"
+    dlq: "dlq.test"

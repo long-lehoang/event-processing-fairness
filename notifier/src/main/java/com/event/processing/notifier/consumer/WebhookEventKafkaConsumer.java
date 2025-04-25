@@ -72,7 +72,10 @@ public class WebhookEventKafkaConsumer implements EventConsumer {
    *                       events
    * @param acknowledgment Acknowledgment object to mark successful processing
    */
-  @KafkaListener(topics = "${spring.kafka.topic.webhook-event.name:webhook-events}", groupId = "webhook-group", containerFactory = "kafkaListenerContainerFactory")
+  @KafkaListener(
+      topics = "${spring.kafka.topic.webhook-event.name:webhook-events}",
+      groupId = "${spring.kafka.consumer.group-id:dlq-event-processing-group}",
+      containerFactory = "kafkaListenerContainerFactory")
   @Override
   public void consume(List<ConsumerRecord<String, WebhookEventDTO>> records, Acknowledgment acknowledgment) {
     meterRegistry.counter(KAFKA_EVENT_COUNT).increment(records.size());

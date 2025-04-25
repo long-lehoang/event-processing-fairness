@@ -105,6 +105,13 @@ public class WebhookServiceImpl implements WebhookService {
                                   BaseEventDTO webhookPayload, Exception e) {
     log.error("Circuit breaker open. Moving event {} to DLQ.", eventId, e);
     meterRegistry.counter(CIRCUIT_BREAKER_OPEN_COUNT).increment();
-    deadLetterQueueProducer.publish(deadLetterQueueTopic, eventPayload.getAccountId(), eventPayload);
+
+    // Send to DLQ when circuit breaker is open
+    deadLetterQueueProducer.publishWithFailureReason(
+        deadLetterQueueTopic,
+        eventPayload.getAccountId(),
+        eventPayload,
+        e.getMessage() != null ? e.getMessage() : "Circuit breaker open"
+    );
   }
 }

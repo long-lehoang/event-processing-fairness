@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dlq
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.dlq.replicaCount }}
+  selector:
+    matchLabels:
+      app: dlq
+  template:
+    metadata:
+      labels:
+        app: dlq
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: dlq
+          image: {{ .Values.dlq.image }}
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "250m"     # Request 0.25 vCPU
+              memory: "512Mi" # Request 512MB RAM
+            limits:
+              cpu: "500m"     # Max 0.5 vCPU
+              memory: "1Gi"   # Max 1GB RAM
+          ports:
+            - containerPort: {{ .Values.dlq.service.port }}
+          env:
+            # Kafka Config
+            - name: BOOTSTRAP_SERVERS_CONFIG
+              value: {{ .Values.dlq.env.BOOTSTRAP_SERVERS_CONFIG }}
+            - name: WEBHOOK_EVENT_TOPIC
+              value: {{ .Values.dlq.env.WEBHOOK_EVENT_TOPIC }}
+            - name: WEBHOOK_EVENT_TOPIC_PARTITIONS
+              value: "{{ .Values.dlq.env.WEBHOOK_EVENT_TOPIC_PARTITIONS }}"
+            - name: WEBHOOK_EVENT_TOPIC_REPLICATION_FACTOR
+              value: "{{ .Values.dlq.env.WEBHOOK_EVENT_TOPIC_REPLICATION_FACTOR }}"
+            - name: WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC
+              value: {{ .Values.dlq.env.WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC }}
+            - name: WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_PARTITIONS
+              value: "{{ .Values.dlq.env.WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_PARTITIONS }}"
+            - name: WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_REPLICATION_FACTOR
+              value: "{{ .Values.dlq.env.WEBHOOK_EVENT_DEAD_LETTER_QUEUE_TOPIC_REPLICATION_FACTOR }}"
+
+            # Database Config
+            - name: DB_HOST
+              value: {{ .Values.dlq.env.DB_HOST }}
+            - name: DB_NAME
+              value: {{ .Values.dlq.env.DB_NAME }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+
+            # Thread Pool Config
+            - name: KAFKA_CONSUMER_CORE_SIZE
+              value: "{{ .Values.dlq.env.KAFKA_CONSUMER_CORE_SIZE }}"
+            - name: KAFKA_CONSUMER_MAX_SIZE
+              value: "{{ .Values.dlq.env.KAFKA_CONSUMER_MAX_SIZE }}"
+            - name: KAFKA_CONSUMER_QUEUE_CAPACITY
+              value: "{{ .Values.dlq.env.KAFKA_CONSUMER_QUEUE_CAPACITY }}"
