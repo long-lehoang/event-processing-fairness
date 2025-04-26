@@ -1,0 +1,62 @@
+server:
+  port: "8080"
+  address: "0.0.0.0"
+
+kafka:
+  bootstrapServers: "localhost:9092"
+  topics:
+    webhookEvent:
+      name: "webhook-events"
+      partitions: 3
+      replicationFactor: 1
+    deadLetterQueue:
+      name: "webhook-event-dead-letter-queue"
+      partitions: 3
+      replicationFactor: 1
+  consumer:
+    groupID: "event-processing-group"
+    autoOffsetReset: "earliest"
+    pollTimeout: 3000
+    maxPollRecords: 100
+    concurrency: 1
+  producer:
+    retries: 5
+    acks: "all"
+    deliveryTimeoutMs: 30000
+    requestTimeoutMs: 5000
+    retryBackoffMs: 500
+
+redis:
+  host: "localhost"
+  port: 6379
+  limit:
+    event: 400
+    time: 1
+
+database:
+  host: "localhost"
+  port: 5432
+  username: "postgres"
+  password: "postgres"
+  database: "webhook"
+
+resilience:
+  retry:
+    webhookRetry:
+      maxAttempts: 5
+      waitDuration: "2s"
+      exponentialBackoffMultiplier: 2.0
+  circuitBreaker:
+    webhookCircuitBreaker:
+      failureRateThreshold: 50.0
+      slowCallRateThreshold: 60.0
+      slowCallDurationThreshold: "2s"
+      waitDurationInOpenState: "10s"
+      permittedNumberOfCallsInHalfOpenState: 3
+      minimumNumberOfCalls: 5
+
+threadPool:
+  kafkaConsumer:
+    coreSize: 10
+    maxSize: 50
+    queueCapacity: 100
