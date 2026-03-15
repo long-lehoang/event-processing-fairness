@@ -34,6 +34,8 @@ type EventProducer interface {
 type MetricsService interface {
 	// IncrementDuplicateEventCount increments the duplicate event counter
 	IncrementDuplicateEventCount()
+	// IncrementWebhookExecutionCount increments the webhook execution counter
+	IncrementWebhookExecutionCount()
 }
 
 // NewWebhookEventFairnessProcessing creates a new WebhookEventFairnessProcessing
@@ -67,19 +69,19 @@ func (p *WebhookEventFairnessProcessing) Process(
 		p.metrics.IncrementDuplicateEventCount()
 		return nil
 	}
-	
-	// Mark the event as processed to prevent duplicate processing
-	if err := p.deduplicationService.MarkProcessed(ctx, eventID); err != nil {
-		log.Printf("Failed to mark event as processed: %v", err)
-		// Continue processing even if marking fails
-	}
-	
+
 	// Process the webhook with retry
+	p.metrics.IncrementWebhookExecutionCount()
 	if err := p.webhookService.ProcessWithRetry(ctx, eventID, eventPayload, url, payload); err != nil {
 		log.Printf("Failed to process webhook for event %s: %v", eventID, err)
 		return err
 	}
-	
+
+	// Mark the event as processed only after successful delivery
+	if err := p.deduplicationService.MarkProcessed(ctx, eventID); err != nil {
+		log.Printf("Failed to mark event as processed: %v", err)
+	}
+
 	log.Printf("Successfully processed webhook for event %s", eventID)
 	return nil
 }

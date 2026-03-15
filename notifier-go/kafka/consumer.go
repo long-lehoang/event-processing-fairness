@@ -13,6 +13,11 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// EventProducer defines the interface for publishing webhook events
+type EventProducer interface {
+	Publish(ctx context.Context, topic, key string, payload *dto.WebhookEventDTO) error
+}
+
 // Consumer handles consuming webhook events from Kafka
 type Consumer struct {
 	reader          *kafka.Reader
@@ -20,6 +25,7 @@ type Consumer struct {
 	eventProcessing WebhookEventProcessing
 	rateLimiter     RateLimiterService
 	eventService    WebhookEventService
+	eventProducer   EventProducer
 	metrics         MetricsService
 	workerPool      *WorkerPool
 }
@@ -71,14 +77,19 @@ func (p *WorkerPool) Submit(task func()) {
 // NewConsumer creates a new Kafka consumer
 func NewConsumer(cfg *config.Config) (*Consumer, error) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:        []string{cfg.Kafka.BootstrapServers},
-		Topic:          cfg.Kafka.Topics.WebhookEvent.Name,
-		GroupID:        cfg.Kafka.Consumer.GroupID,
-		MinBytes:       10e3, // 10KB
-		MaxBytes:       10e6, // 10MB
-		MaxWait:        cfg.Kafka.Consumer.PollTimeout,
-		StartOffset:    kafka.FirstOffset,
-		CommitInterval: time.Second,
+		Brokers:            []string{cfg.Kafka.BootstrapServers},
+		Topic:              cfg.Kafka.Topics.WebhookEvent.Name,
+		GroupID:            cfg.Kafka.Consumer.GroupID,
+		MinBytes:           1,    // Don't wait for data accumulation
+		MaxBytes:           10e6, // 10MB
+		MaxWait:            cfg.Kafka.Consumer.PollTimeout * time.Millisecond,
+		StartOffset:        kafka.FirstOffset,
+		CommitInterval:     time.Second,
+		HeartbeatInterval:      3 * time.Second,
+		SessionTimeout:        10 * time.Second,
+		RebalanceTimeout:      5 * time.Second,
+		JoinGroupBackoff:      time.Second,
+		PartitionWatchInterval: time.Second,
 	})
 	
 	return &Consumer{
@@ -106,6 +117,11 @@ func (c *Consumer) SetEventService(eventService WebhookEventService) {
 // SetMetrics sets the metrics service
 func (c *Consumer) SetMetrics(metrics MetricsService) {
 	c.metrics = metrics
+}
+
+// SetEventProducer sets the event producer for republishing rate-limited events
+func (c *Consumer) SetEventProducer(producer EventProducer) {
+	c.eventProducer = producer
 }
 
 // Start starts consuming messages from Kafka
@@ -147,24 +163,35 @@ func (c *Consumer) Start(ctx context.Context) error {
 	}
 }
 
-// readBatch reads a batch of messages from Kafka
+// readBatch reads a batch of messages from Kafka.
+// It blocks until the first message arrives, then collects additional messages
+// within a short window before returning the batch.
 func (c *Consumer) readBatch(ctx context.Context) ([]kafka.Message, error) {
 	var messages []kafka.Message
-	
-	// Read up to MaxPollRecords messages
-	for i := 0; i < c.config.Kafka.Consumer.MaxPollRecords; i++ {
-		message, err := c.reader.FetchMessage(ctx)
-		if err != nil {
-			if len(messages) > 0 {
-				// Return the messages we've read so far
-				return messages, nil
-			}
-			return nil, err
-		}
-		
-		messages = append(messages, message)
+
+	// Block until the first message arrives
+	message, err := c.reader.FetchMessage(ctx)
+	if err != nil {
+		return nil, err
 	}
-	
+	messages = append(messages, message)
+
+	// Try to collect more messages within a short window (non-blocking drain)
+	batchTimeout := c.config.Kafka.Consumer.PollTimeout * time.Millisecond
+	if batchTimeout <= 0 {
+		batchTimeout = 3 * time.Second
+	}
+	batchCtx, cancel := context.WithTimeout(ctx, batchTimeout)
+	defer cancel()
+
+	for i := 1; i < c.config.Kafka.Consumer.MaxPollRecords; i++ {
+		msg, err := c.reader.FetchMessage(batchCtx)
+		if err != nil {
+			break // timeout or error — return what we have
+		}
+		messages = append(messages, msg)
+	}
+
 	return messages, nil
 }
 
@@ -214,28 +241,35 @@ func (c *Consumer) processBatch(ctx context.Context, messages []kafka.Message) {
 // processEventGroup processes a group of events of the same type
 func (c *Consumer) processEventGroup(ctx context.Context, eventType string, messages []kafka.Message) {
 	log.Printf("Processing %d events of type %s", len(messages), eventType)
-	
-	// Filter events by rate limit
-	var allowedEvents []kafka.Message
+
+	// Group events by account ID for batch rate limit checking
+	eventsByAccount := make(map[string][]kafka.Message)
 	for _, message := range messages {
 		var event dto.WebhookEventDTO
 		if err := json.Unmarshal(message.Value, &event); err != nil {
 			log.Printf("Failed to unmarshal event: %v", err)
 			continue
 		}
-		
-		if c.rateLimiter.IsAllowed(ctx, event.AccountID) {
-			allowedEvents = append(allowedEvents, message)
+		eventsByAccount[event.AccountID] = append(eventsByAccount[event.AccountID], message)
+	}
+
+	// Perform batch rate limit checks per account
+	var allowedEvents []kafka.Message
+	for accountID, accountEvents := range eventsByAccount {
+		if c.rateLimiter.AreEventsAllowed(ctx, accountID, len(accountEvents)) {
+			allowedEvents = append(allowedEvents, accountEvents...)
 		} else {
-			log.Printf("Rate limit exceeded for account %s, skipping event %s", event.AccountID, event.EventID)
+			// Republish rate-limited events back to Kafka
+			log.Printf("Rate limited %d events for account %s", len(accountEvents), accountID)
+			c.republishRateLimitedEvents(ctx, accountEvents)
 		}
 	}
-	
+
 	if len(allowedEvents) == 0 {
 		log.Printf("No events allowed for processing after rate limiting for type %s", eventType)
 		return
 	}
-	
+
 	// Extract event IDs
 	var eventIDs []string
 	for _, message := range allowedEvents {
@@ -292,6 +326,26 @@ func (c *Consumer) processEventGroup(ctx context.Context, eventType string, mess
 	}
 	
 	wg.Wait()
+}
+
+// republishRateLimitedEvents republishes rate-limited events back to the Kafka topic
+func (c *Consumer) republishRateLimitedEvents(ctx context.Context, messages []kafka.Message) {
+	if c.eventProducer == nil {
+		log.Printf("Event producer not set, cannot republish rate-limited events")
+		return
+	}
+
+	topic := c.config.Kafka.Topics.WebhookEvent.Name
+	for _, message := range messages {
+		var event dto.WebhookEventDTO
+		if err := json.Unmarshal(message.Value, &event); err != nil {
+			log.Printf("Failed to unmarshal event for republish: %v", err)
+			continue
+		}
+		if err := c.eventProducer.Publish(ctx, topic, string(message.Key), &event); err != nil {
+			log.Printf("Failed to republish rate-limited event %s: %v", event.EventID, err)
+		}
+	}
 }
 
 // Close closes the Kafka consumer

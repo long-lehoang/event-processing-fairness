@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
-	
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/event-processing/notifier-go/config"
 	"github.com/event-processing/notifier-go/domain/dto"
@@ -15,11 +16,12 @@ import (
 
 // WebhookServiceImpl implements the WebhookService interface
 type WebhookServiceImpl struct {
-	webhookClient service.WebhookClient
-	dlqProducer   service.DeadLetterQueueProducer
-	metrics       service.MetricsService
-	config        *config.Config
+	webhookClient   service.WebhookClient
+	dlqProducer     service.DeadLetterQueueProducer
+	metrics         service.MetricsService
+	config          *config.Config
 	circuitBreakers map[string]*gobreaker.CircuitBreaker
+	cbMu            sync.RWMutex
 }
 
 // NewWebhookService creates a new WebhookServiceImpl
@@ -94,14 +96,25 @@ func (s *WebhookServiceImpl) ProcessWithRetry(
 	return nil
 }
 
-// getCircuitBreaker gets or creates a circuit breaker for the given URL
+// getCircuitBreaker gets or creates a circuit breaker for the given URL (thread-safe)
 func (s *WebhookServiceImpl) getCircuitBreaker(url string) *gobreaker.CircuitBreaker {
+	s.cbMu.RLock()
+	if cb, exists := s.circuitBreakers[url]; exists {
+		s.cbMu.RUnlock()
+		return cb
+	}
+	s.cbMu.RUnlock()
+
+	s.cbMu.Lock()
+	defer s.cbMu.Unlock()
+
+	// Double-check after acquiring write lock
 	if cb, exists := s.circuitBreakers[url]; exists {
 		return cb
 	}
-	
+
 	cbConfig := s.config.Resilience.CircuitBreaker.WebhookCircuitBreaker
-	
+
 	settings := gobreaker.Settings{
 		Name:        url,
 		MaxRequests: uint32(cbConfig.PermittedNumberOfCallsInHalfOpenState),
@@ -115,7 +128,7 @@ func (s *WebhookServiceImpl) getCircuitBreaker(url string) *gobreaker.CircuitBre
 			log.Printf("Circuit breaker %s state changed from %s to %s", name, from, to)
 		},
 	}
-	
+
 	cb := gobreaker.NewCircuitBreaker(settings)
 	s.circuitBreakers[url] = cb
 	return cb

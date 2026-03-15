@@ -2,7 +2,7 @@ package monitoring
 
 import (
 	"time"
-	
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -10,16 +10,18 @@ import (
 // Metrics holds all the Prometheus metrics for the application
 type Metrics struct {
 	// Kafka metrics
-	kafkaEventCount        prometheus.Counter
+	kafkaEventCount          prometheus.Counter
 	kafkaBatchProcessingTime prometheus.Histogram
-	
+
 	// Webhook metrics
 	webhookSuccessCount    prometheus.Counter
 	webhookFailureCount    prometheus.Counter
-	
+	webhookExecutionCount  prometheus.Counter
+	circuitBreakerOpenCount prometheus.Counter
+
 	// Deduplication metrics
-	duplicateEventCount    prometheus.Counter
-	
+	duplicateEventCount prometheus.Counter
+
 	// Rate limiting metrics
 	rateLimitExceededCount prometheus.Counter
 }
@@ -32,8 +34,8 @@ func NewMetrics() *Metrics {
 			Help: "The total number of events received from Kafka",
 		}),
 		kafkaBatchProcessingTime: promauto.NewHistogram(prometheus.HistogramOpts{
-			Name: "kafka_batch_processing_time_seconds",
-			Help: "The time taken to process a batch of Kafka events",
+			Name:    "kafka_batch_processing_time_seconds",
+			Help:    "The time taken to process a batch of Kafka events",
 			Buckets: prometheus.DefBuckets,
 		}),
 		webhookSuccessCount: promauto.NewCounter(prometheus.CounterOpts{
@@ -43,6 +45,14 @@ func NewMetrics() *Metrics {
 		webhookFailureCount: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "webhook_failure_count",
 			Help: "The total number of failed webhook deliveries",
+		}),
+		webhookExecutionCount: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "webhook_execution_count",
+			Help: "The total number of webhook execution attempts",
+		}),
+		circuitBreakerOpenCount: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "circuit_breaker_open_count",
+			Help: "The total number of times the circuit breaker has opened",
 		}),
 		duplicateEventCount: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "duplicate_event_count",
@@ -73,6 +83,16 @@ func (m *Metrics) IncrementWebhookSuccess() {
 // IncrementWebhookFailure increments the webhook failure counter
 func (m *Metrics) IncrementWebhookFailure() {
 	m.webhookFailureCount.Inc()
+}
+
+// IncrementWebhookExecutionCount increments the webhook execution counter
+func (m *Metrics) IncrementWebhookExecutionCount() {
+	m.webhookExecutionCount.Inc()
+}
+
+// IncrementCircuitBreakerOpenCount increments the circuit breaker open counter
+func (m *Metrics) IncrementCircuitBreakerOpenCount() {
+	m.circuitBreakerOpenCount.Inc()
 }
 
 // IncrementDuplicateEventCount increments the duplicate event counter

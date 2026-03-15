@@ -10,10 +10,18 @@ import (
 	"time"
 
 	"github.com/event-processing/notifier-go/api"
+	"github.com/event-processing/notifier-go/application"
+	"github.com/event-processing/notifier-go/client"
 	"github.com/event-processing/notifier-go/config"
+	"github.com/event-processing/notifier-go/database"
+	"github.com/event-processing/notifier-go/domain/repository"
 	"github.com/event-processing/notifier-go/kafka"
 	"github.com/event-processing/notifier-go/monitoring"
+	"github.com/event-processing/notifier-go/provider"
+	"github.com/event-processing/notifier-go/provider/implementations"
 	"github.com/event-processing/notifier-go/redis"
+	"github.com/event-processing/notifier-go/service"
+	webhookImpl "github.com/event-processing/notifier-go/service/impl"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,6 +35,13 @@ func main() {
 	// Setup context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Initialize database connection
+	db, err := database.NewConnection(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize database connection: %v", err)
+	}
+	defer db.Close()
 
 	// Initialize Redis client
 	redisClient, err := redis.NewClient(cfg)
@@ -49,14 +64,55 @@ func main() {
 	}
 	defer producer.Close()
 
+	// Initialize DLQ producer
+	dlqProducer, err := kafka.NewDLQProducer(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize DLQ producer: %v", err)
+	}
+	defer dlqProducer.Close()
+
 	// Initialize metrics
 	metrics := monitoring.NewMetrics()
+
+	// Initialize repositories
+	subscriberEventRepo := repository.NewSubscriberCreatedEventRepository(db)
+	segmentRepo := repository.NewSegmentRepository(db)
+
+	// Initialize providers
+	subscriberProvider := implementations.NewSubscriberEventProvider(subscriberEventRepo, segmentRepo)
+
+	// Initialize WebhookEventService
+	webhookEventService := service.NewWebhookEventService([]provider.WebhookEventProvider{subscriberProvider})
+
+	// Initialize Redis services
+	deduplicationService := redis.NewDeduplicationService(redisClient)
+	rateLimiterService := redis.NewRateLimiterService(redisClient, cfg)
+
+	// Initialize webhook client and service
+	webhookClient := client.NewWebhookClient()
+	webhookService := webhookImpl.NewWebhookService(webhookClient, dlqProducer, metrics, cfg)
+
+	// Initialize fairness-aware event processing
+	eventProcessing := application.NewWebhookEventFairnessProcessing(
+		deduplicationService,
+		webhookService,
+		producer,
+		cfg.Kafka.Topics.WebhookEvent.Name,
+		metrics,
+	)
+
+	// Wire dependencies into Kafka consumer
+	consumer.SetEventProcessing(eventProcessing)
+	consumer.SetRateLimiter(rateLimiterService)
+	consumer.SetEventService(webhookEventService)
+	consumer.SetMetrics(metrics)
+	consumer.SetEventProducer(producer)
 
 	// Setup Gin router
 	router := gin.Default()
 
 	// Register API routes
-	api.RegisterRoutes(router, metrics)
+	api.RegisterRoutes(router, producer)
 
 	// Start HTTP server
 	server := &http.Server{

@@ -7,8 +7,10 @@ const (
 	KafkaBatchProcessingTime = "kafka_batch_processing_time_seconds"
 	
 	// Webhook metrics
-	WebhookSuccessCount    = "webhook_success_count"
-	WebhookFailureCount    = "webhook_failure_count"
+	WebhookSuccessCount     = "webhook_success_count"
+	WebhookFailureCount     = "webhook_failure_count"
+	WebhookExecutionCount   = "webhook_execution_count"
+	CircuitBreakerOpenCount = "circuit_breaker_open_count"
 	
 	// Deduplication metrics
 	DuplicateEventCount    = "duplicate_event_count"

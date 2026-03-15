@@ -4,17 +4,43 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/event-processing/notifier-go/config"
 	"github.com/go-redis/redis/v8"
 )
+
+// Lua script for atomically checking and incrementing rate limit counters.
+// Ported from Java's AccountRateLimiterServiceImpl.
+const checkAndIncrementScript = `
+local key = KEYS[1]
+local count = tonumber(ARGV[1])
+local limit = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
+local exists = redis.call('EXISTS', key)
+if exists == 0 then
+  redis.call('SET', key, count, 'EX', ttl)
+  return 1
+else
+  local current = tonumber(redis.call('GET', key))
+  if (current + count) <= limit then
+    redis.call('INCRBY', key, count)
+    local keyTTL = redis.call('TTL', key)
+    if keyTTL == -1 then
+      redis.call('EXPIRE', key, ttl)
+    end
+    return 1
+  else
+    return 0
+  end
+end
+`
 
 // RateLimiterService provides rate limiting functionality
 type RateLimiterService struct {
 	client         *redis.Client
 	eventLimit     int
 	timeWindowMins int
+	script         *redis.Script
 }
 
 // NewRateLimiterService creates a new RateLimiterService
@@ -23,6 +49,7 @@ func NewRateLimiterService(redisClient *Client, cfg *config.Config) *RateLimiter
 		client:         redisClient.GetClient(),
 		eventLimit:     cfg.Redis.Limit.Event,
 		timeWindowMins: cfg.Redis.Limit.Time,
+		script:         redis.NewScript(checkAndIncrementScript),
 	}
 }
 
@@ -31,44 +58,24 @@ func (s *RateLimiterService) IsAllowed(ctx context.Context, accountID string) bo
 	return s.AreEventsAllowed(ctx, accountID, 1)
 }
 
-// AreEventsAllowed checks if multiple events are allowed for an account
+// AreEventsAllowed checks if multiple events are allowed for an account using an atomic Lua script
 func (s *RateLimiterService) AreEventsAllowed(ctx context.Context, accountID string, count int) bool {
-	key := fmt.Sprintf("rate:limit:%s", accountID)
-	
-	// Use Redis MULTI to execute commands atomically
-	pipe := s.client.Pipeline()
-	
-	// Get current count
-	countCmd := pipe.Get(ctx, key)
-	
-	// Increment count
-	pipe.IncrBy(ctx, key, int64(count))
-	
-	// Set expiry if not already set
-	pipe.Expire(ctx, key, time.Duration(s.timeWindowMins)*time.Minute)
-	
-	// Execute pipeline
-	_, err := pipe.Exec(ctx)
-	if err != nil && err != redis.Nil {
+	key := fmt.Sprintf("rate-limit:%s", accountID)
+	expirySeconds := s.timeWindowMins * 60
+
+	result, err := s.script.Run(ctx, s.client, []string{key},
+		count, s.eventLimit, expirySeconds,
+	).Int64()
+
+	if err != nil {
 		log.Printf("Error checking rate limit for account %s: %v", accountID, err)
 		return true // Fail open on error
 	}
-	
-	// Get the value after increment
-	val, err := countCmd.Int64()
-	if err == redis.Nil {
-		// Key doesn't exist yet, this is the first event
-		return true
-	} else if err != nil {
-		log.Printf("Error getting rate limit count for account %s: %v", accountID, err)
-		return true // Fail open on error
-	}
-	
-	// Check if under limit
-	allowed := val <= int64(s.eventLimit)
+
+	allowed := result == 1
 	if !allowed {
-		log.Printf("Rate limit exceeded for account %s: %d/%d", accountID, val, s.eventLimit)
+		log.Printf("Rate limit exceeded for account %s: attempted %d events, limit %d", accountID, count, s.eventLimit)
 	}
-	
+
 	return allowed
 }
